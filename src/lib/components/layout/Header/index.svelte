@@ -368,21 +368,23 @@
 		cursor: pointer;
 		color: var(--text);
 		flex-shrink: 0;
-		view-transition-name: theme-switch;
 	}
 
 	.track {
+		--track-width: 3rem;
+		--thumb-size: 1.125rem;
+		--gap: 2px;
+
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		width: 3rem;
+		width: var(--track-width);
 		height: 1.625rem;
 		padding: 0 0.25rem;
 		border-radius: 999px;
 		background-color: var(--border);
 		position: relative;
 		transition: background-color 0.3s;
-		font-size: 0.75rem;
 		overflow: hidden;
 
 		:global(svg) {
@@ -392,7 +394,11 @@
 		}
 
 		@include md {
-			width: 3.25rem;
+			--track-width: 3.25rem;
+			--thumb-size: 1.25rem;
+			--gap: 3px;
+
+			width: var(--track-width);
 			height: 1.75rem;
 			padding: 0 0.3rem;
 
@@ -405,10 +411,11 @@
 
 	.thumb {
 		position: absolute;
-		top: 5x;
-		left: 5px;
-		width: 1.125rem;
-		height: 1.125rem;
+		top: 50%;
+		left: var(--gap);
+		width: var(--thumb-size);
+		height: var(--thumb-size);
+		transform: translateY(-50%);
 		border-radius: 50%;
 		background-color: var(--surface);
 		box-shadow: var(--soft-box-shadow);
@@ -417,28 +424,15 @@
 		@media (prefers-reduced-motion: reduce) {
 			transition: none;
 		}
-
-		@include md {
-			top: 3.5x;
-			left: 5px;
-			width: 1.25rem;
-			height: 1.25rem;
-		}
 	}
 
 	.dark .thumb {
-		transform: translateX(1.25rem);
-
-		@include md {
-			transform: translateX(1.375rem);
-		}
+		transform: translateY(-50%)
+			translateX(calc(var(--track-width) - var(--thumb-size) - var(--gap) * 2));
 	}
 
 	:global([data-theme="dark"]) .thumb {
-		transform: translateX(1.25rem);
-
-		@include md {
-			transform: translateX(1.375rem);
-		}
+		transform: translateY(-50%)
+			translateX(calc(var(--track-width) - var(--thumb-size) - var(--gap) * 2));
 	}
 </style>

@@ -31,12 +31,6 @@
 	}
 }
 
-// Prevent the theme switch from animating during cross-document transitions
-::view-transition-old(theme-switch),
-::view-transition-new(theme-switch) {
-	animation: none;
-}
-
 :root {
 	// Background & surfaces
 	--bg: #fafaf5;
