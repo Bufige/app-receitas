@@ -1,0 +1,32 @@
+{
+	"name": "saudade-svelte",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"lint": "biome lint .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.6",
+		"@inlang/paraglide-js": "^2.10.0",
+		"@sveltejs/adapter-auto": "7.0.1",
+		"@sveltejs/kit": "2.53.4",
+		"@sveltejs/vite-plugin-svelte": "6.2.4",
+		"sass": "^1.97.3",
+		"svelte": "5.53.7",
+		"svelte-check": "4.4.4",
+		"typescript": "5.9.3",
+		"vite": "7.3.1"
+	},
+	"dependencies": {
+		"@tanstack/svelte-query": "^6.1.0"
+	}
+}

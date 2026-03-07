@@ -1,0 +1,30 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+	"files": {
+		"includes": ["src/**/*.{js,ts,jsx,tsx,json,css}"]
+	},
+	"formatter": {
+		"enabled": true
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"correctness": {
+				"noUnusedImports": {
+					"level": "error",
+					"fix": "safe"
+				}
+			}
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": {
+					"level": "on"
+				}
+			}
+		}
+	}
+}
