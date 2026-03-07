@@ -190,7 +190,7 @@
 			</span>
 		</button>
 		{#if !auth.isAuthenticated}
-			<a href={localizeHref("/login")}>{m.auth_login()}</a>
+			<a class="auth-link" href={localizeHref("/login")}>{m.auth_login()}</a>
 		{/if}
 	</nav>
 </header>
@@ -344,6 +344,13 @@
 		}
 	}
 
+	.auth-link {
+		min-width: 4rem;
+		text-align: center;
+		font-size: 0.8125rem;
+		white-space: nowrap;
+	}
+
 	.switch {
 		position: relative;
 		background: none;
@@ -351,6 +358,7 @@
 		padding: 0;
 		cursor: pointer;
 		color: var(--text);
+		flex-shrink: 0;
 	}
 
 	.track {
