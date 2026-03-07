@@ -38,6 +38,7 @@
 
 ## Styling & UI
 
+- **Mobile-first is imperative.** Base styles target small screens; desktop enhancements use `min-width` media queries via breakpoint mixins (`@include md`, `@include lg`, etc.) from `$lib/assets/styles/breakpoints.scss`. Never use `max-width` queries.
 - Prefer existing components in `$lib/components/*` before creating new ones.
 - Use scoped `<style lang="scss">` blocks in `.svelte` files for component styles.
 - If you need a new button look, extend the shared `Button` component instead of creating ad-hoc buttons.

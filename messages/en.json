@@ -4,5 +4,8 @@
 	"auth_login": "Login",
 	"auth_register": "Register",
 	"auth_login_text": "Log in to access your account",
-	"auth_register_text": "Create an account to get started"
+	"auth_register_text": "Create an account to get started",
+	"footer_rights": "© 2026 Saudade Pet, Inc.",
+	"footer_privacy_policy": "Privacy Policy",
+	"footer_terms_of_service": "Terms of Service"
 }

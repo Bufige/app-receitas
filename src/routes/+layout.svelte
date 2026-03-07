@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
-	import { page } from "$app/state";
 	import favicon from "$lib/assets/favicon.svg?url";
 	import "$lib/assets/styles/global.scss";
+	import Footer from "$lib/components/layout/Footer/index.svelte";
 	import Header from "$lib/components/layout/Header/index.svelte";
-	import { locales, localizeHref } from "$lib/paraglide/runtime";
 	import { useThemeStore } from "$lib/stores/theme.svelte";
 	import { QueryClient, QueryClientProvider } from "@tanstack/svelte-query";
 
@@ -24,16 +23,25 @@
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
-<Header />
 
-<div>
-	{#each locales as locale}
-		<a href={localizeHref(page.url.pathname, { locale })} data-sveltekit-reload
-			>{locale}</a
-		>
-	{/each}
+<div class="app">
+	<Header />
+	<main class="container">
+		<QueryClientProvider client={queryClient}>
+			{@render children()}
+		</QueryClientProvider>
+	</main>
+	<Footer />
 </div>
 
-<QueryClientProvider client={queryClient}
-	>{@render children()}</QueryClientProvider
->
+<style lang="scss">
+	.app {
+		display: flex;
+		flex-direction: column;
+		min-height: 100dvh;
+	}
+
+	main {
+		flex: 1;
+	}
+</style>

@@ -3,6 +3,7 @@
 	import { localizeHref } from "$lib/paraglide/runtime";
 	import { useThemeStore } from "$lib/stores/theme.svelte";
 	import Button from "@components/ui/Button/index.svelte";
+	import ButtonGroup from "@components/ui/ButtonGroup/index.svelte";
 
 	const theme = useThemeStore();
 </script>
@@ -21,6 +22,29 @@
 <button onclick={() => theme.toggle()}>
 	{theme.current === "dark" ? "☀️" : "🌙"}
 </button>
+<ButtonGroup direction="row" gap="1rem">
+	<Button
+		variant="primary"
+		size="medium"
+		onclick={() => alert("Primary Button Clicked!")}
+	>
+		Primary
+	</Button>
+	<Button
+		variant="secondary"
+		size="medium"
+		onclick={() => alert("Secondary Button Clicked!")}
+	>
+		Secondary
+	</Button>
+	<Button
+		variant="danger"
+		size="medium"
+		onclick={() => alert("Danger Button Clicked!")}
+	>
+		Danger
+	</Button>
+</ButtonGroup>
 <Button
 	variant="primary"
 	size="large"

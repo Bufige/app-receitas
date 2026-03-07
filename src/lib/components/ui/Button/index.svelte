@@ -38,12 +38,15 @@
 </button>
 
 <style lang="scss">
+	@use "$lib/assets/styles/breakpoints" as *;
+
 	.btn {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		position: relative;
 		gap: 0.5em;
+		width: 100%;
 		border: 1px solid transparent;
 		border-radius: 6px;
 		font-weight: 500;
@@ -53,6 +56,10 @@
 			border-color 0.2s,
 			opacity 0.2s;
 		white-space: nowrap;
+
+		@include md {
+			width: auto;
+		}
 
 		&:disabled {
 			cursor: not-allowed;
@@ -92,7 +99,6 @@
 
 	.primary {
 		background-color: var(--primary);
-		color: var(--black);
 
 		&:hover:not(:disabled) {
 			background-color: var(--primary-hover);
@@ -101,7 +107,6 @@
 
 	.secondary {
 		background-color: var(--secondary);
-		color: var(--black);
 
 		&:hover:not(:disabled) {
 			background-color: var(--secondary-hover);
@@ -110,10 +115,9 @@
 
 	.danger {
 		background-color: var(--error);
-		color: var(--white);
 
 		&:hover:not(:disabled) {
-			background-color: #e6352b;
+			background-color: var(--error-hover);
 		}
 	}
 

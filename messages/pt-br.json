@@ -4,5 +4,8 @@
 	"auth_login": "Logar",
 	"auth_register": "Cadastro",
 	"auth_login_text": "Faça login para acessar sua conta",
-	"auth_register_text": "Crie uma conta para começar"
+	"auth_register_text": "Crie uma conta para começar",
+	"footer_rights": "© 2026 Saudade Pet, Inc.",
+	"footer_privacy_policy": "Política de Privacidade",
+	"footer_terms_of_service": "Termos de Serviço"
 }
