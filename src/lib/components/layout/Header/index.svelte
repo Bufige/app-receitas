@@ -413,8 +413,8 @@
 		}
 
 		@include md {
-			top: 3px;
-			left: 3px;
+			top: 3.5x;
+			left: 5px;
 			width: 1.25rem;
 			height: 1.25rem;
 		}
