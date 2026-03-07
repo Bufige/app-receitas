@@ -340,6 +340,12 @@
 		&.active {
 			color: var(--primary);
 			font-weight: 600;
+			background-color: color-mix(in srgb, var(--primary) 12%, transparent);
+
+			&:hover,
+			&.focused {
+				background-color: color-mix(in srgb, var(--primary) 18%, transparent);
+			}
 		}
 
 		@include md {
