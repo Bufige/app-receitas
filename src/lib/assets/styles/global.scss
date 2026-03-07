@@ -1,3 +1,42 @@
+// Cross-document view transitions (locale switch, full navigations)
+@view-transition {
+	navigation: auto;
+}
+
+::view-transition-old(root) {
+	animation: fade-out 0.25s ease-out;
+}
+
+::view-transition-new(root) {
+	animation: fade-in 0.25s ease-in;
+}
+
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+
+	to {
+		opacity: 0;
+	}
+}
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+// Prevent the theme switch from animating during cross-document transitions
+::view-transition-old(theme-switch),
+::view-transition-new(theme-switch) {
+	animation: none;
+}
+
 :root {
 	// Background & surfaces
 	--bg: #fafaf5;
@@ -82,7 +121,7 @@ input,
 textarea,
 select {
 	font: inherit;
-	color: inherit;
+	color: var(--text);
 }
 
 // Focus-visible outline for keyboard navigation

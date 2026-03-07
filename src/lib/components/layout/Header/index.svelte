@@ -6,6 +6,9 @@
 	import { useThemeStore } from "$lib/stores/theme.svelte";
 	import { announce } from "$lib/utils/announce";
 	import Icon from "@iconify/svelte";
+	import chevronDown from "@iconify-icons/mdi/chevron-down";
+	import weatherNight from "@iconify-icons/mdi/weather-night";
+	import weatherSunny from "@iconify-icons/mdi/weather-sunny";
 	import Logo from "$lib/assets/logo.svg?component";
 
 	const auth = useAuthStore(),
@@ -138,7 +141,7 @@
 				<span class="locale-label">{localeMap[getLocale()]?.label ?? "EN"}</span
 				>
 				<span class="locale-chevron" aria-hidden="true">
-					<Icon icon="mdi:chevron-down" width="14" height="14" />
+					<Icon icon={chevronDown} width="14" height="14" />
 				</span>
 			</button>
 			{#if open}
@@ -184,8 +187,8 @@
 			aria-checked={theme.current === "dark"}
 		>
 			<span class="track">
-				<Icon icon="mdi:weather-sunny" aria-hidden="true" />
-				<Icon icon="mdi:weather-night" aria-hidden="true" />
+				<Icon icon={weatherSunny} aria-hidden="true" />
+				<Icon icon={weatherNight} aria-hidden="true" />
 				<span class="thumb"></span>
 			</span>
 		</button>
@@ -359,6 +362,7 @@
 		cursor: pointer;
 		color: var(--text);
 		flex-shrink: 0;
+		view-transition-name: theme-switch;
 	}
 
 	.track {
@@ -397,6 +401,10 @@
 	}
 
 	.dark .thumb {
+		transform: translateX(1.5rem);
+	}
+
+	:global([data-theme="dark"]) .thumb {
 		transform: translateX(1.5rem);
 	}
 </style>

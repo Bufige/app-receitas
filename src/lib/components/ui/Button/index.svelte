@@ -90,7 +90,6 @@
 	.default {
 		background-color: var(--surface);
 		border-color: var(--border);
-		color: var(--text);
 
 		&:hover:not(:disabled) {
 			background-color: var(--bg);
@@ -99,6 +98,7 @@
 
 	.primary {
 		background-color: var(--primary);
+		color: var(--surface);
 
 		&:hover:not(:disabled) {
 			background-color: var(--primary-hover);
@@ -107,6 +107,7 @@
 
 	.secondary {
 		background-color: var(--secondary);
+		color: var(--surface);
 
 		&:hover:not(:disabled) {
 			background-color: var(--secondary-hover);
@@ -115,6 +116,7 @@
 
 	.danger {
 		background-color: var(--error);
+		color: var(--surface);
 
 		&:hover:not(:disabled) {
 			background-color: var(--error-hover);
