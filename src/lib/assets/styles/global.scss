@@ -122,6 +122,38 @@ select {
 	border: 0;
 }
 
+// Theme transition: circle expand from click origin
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+	mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+	animation: theme-expand 0.5s ease-out;
+}
+
+// When toggling to dark, animate the old snapshot instead
+[data-theme='dark']::view-transition-old(root) {
+	animation: theme-expand 0.5s ease-out reverse;
+	z-index: 1;
+}
+
+[data-theme='dark']::view-transition-new(root) {
+	animation: none;
+	z-index: -1;
+}
+
+@keyframes theme-expand {
+	from {
+		clip-path: circle(0% at var(--transition-x, 50%) var(--transition-y, 50%));
+	}
+
+	to {
+		clip-path: circle(150% at var(--transition-x, 50%) var(--transition-y, 50%));
+	}
+}
+
 .container {
 	width: 100%;
 	max-width: 1280px;

@@ -32,8 +32,9 @@
 		}
 	}
 
-	function toggleTheme() {
-		theme.toggle();
+	function toggleTheme(event: MouseEvent) {
+		const { clientX, clientY } = event;
+		theme.toggle(clientX, clientY);
 		const next = theme.current === "dark" ? "dark" : "light";
 		announce(m.a11y_theme_changed({ theme: next }));
 	}
