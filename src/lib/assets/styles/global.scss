@@ -1,8 +1,83 @@
-/* Your SCSS code here */
-.greeting {
-	color: darkblue;
+:root {
+	// Background & surfaces
+	--bg: #fafaf5;
+	--surface: #ffffff;
 
-	.inner {
-		font-weight: bold;
+	// Text
+	--text: #121212;
+	--text-muted: #6e6e6e;
+	--placeholder: #b0b0b0;
+
+	// Borders
+	--border: #e0e0e0;
+
+	// Status
+	--success: #3eea69;
+	--warning: #f5a623;
+	--error: #ff3b30;
+
+	// Brand
+	--primary: #3eea69;
+	--primary-hover: #35d45e;
+	--secondary: #eebd2b;
+	--secondary-hover: #daac22;
+
+	// Neutrals
+	--black: #000000;
+	--white: #ffffff;
+
+	// Shadows
+	--box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+	--high-box-shadow: rgba(0, 0, 0, 0.2) 0px 8px 24px;
+	--soft-box-shadow: rgba(0, 0, 0, 0.05) 0px 2px 8px;
+
+	a {
+		color: var(--black);
 	}
+}
+
+[data-theme='dark'] {
+	--bg: #112115;
+	--surface: #0f1c12;
+	--text: #e1e1e1;
+	--text-muted: #9b9b9b;
+	--placeholder: #5c5c5c;
+	--border: #1e3a1f;
+	--success: #3eea69;
+	--warning: #eebd2b;
+	--error: #ff3b30;
+	--primary: #3eea69;
+	--primary-hover: #35d45e;
+	--secondary: #f5a623;
+	--secondary-hover: #da9420;
+	--black: #000000;
+	--white: #ffffff;
+	--box-shadow: rgba(0, 0, 0, 0.5) 0px 4px 12px;
+	--high-box-shadow: rgba(0, 0, 0, 0.7) 0px 8px 24px;
+	--soft-box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 8px;
+
+	a {
+		color: var(--white);
+	}
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	background-color: var(--bg);
+	color: var(--text);
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+
+a {
+	cursor: pointer;
+	text-decoration: none;
 }

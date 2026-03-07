@@ -5,8 +5,8 @@
 </script>
 
 <nav>
-	<a href={localizeHref('/auth/login')}>{m.auth_login()}</a>
-	<a href={localizeHref('/auth/register')}>{m.auth_register()}</a>
+	<a href={localizeHref('/login')}>{m.auth_login()}</a>
+	<a href={localizeHref('/register')}>{m.auth_register()}</a>
 </nav>
 
 {@render children()}

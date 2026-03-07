@@ -7,9 +7,8 @@
 	"workbench.editor.labelFormat": "short",
 	"editor.formatOnSave": true,
 	"editor.codeActionsOnSave": {
-		"source.fixAll.eslint": "explicit",
-		"source.organizeImports": "explicit",
-		"source.sortMembers": "explicit"
+		"source.organizeImports.biome": "explicit",
+		"quickfix.biome": "explicit"
 	},
 	"[typescript]": {
 		"editor.defaultFormatter": "biomejs.biome",
@@ -25,6 +24,9 @@
 	},
 	"[html]": {
 		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[svelte]": {
+		"editor.defaultFormatter": "svelte.svelte-vscode"
 	},
 	"files.eol": "\n"
 }

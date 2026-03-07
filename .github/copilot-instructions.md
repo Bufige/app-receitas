@@ -20,6 +20,14 @@
 - Global styles live in `$lib/assets/styles/global.scss`.
 - Use the `$lib/` alias for all imports from `src/lib/`. Avoid relative imports that traverse up (e.g., `../../lib/`).
 
+## Code Conventions
+- Use Svelte 5 runes and patterns consistently. Do not mix legacy Svelte 3/4 syntax with Svelte 5 features.
+- Keep components focused and reusable. If a component grows beyond a single responsibility, consider breaking it into smaller pieces.
+- Always prefer existing components and utilities before creating new ones. Check `$lib/components/` and `$lib/utils/` before adding new code.
+- Avoid ad-hoc styles and hardcoded values. Use SCSS variables, mixins, and CSS custom properties defined in `global.scss` for consistency.
+- Write clean, readable code with clear naming conventions. Avoid abbreviations and unclear variable names. Use descriptive names for components, props, functions, and variables.
+- USE DRY PRINCIPLES: If you find yourself repeating code, extract it into a reusable component, function, or style. NEVER copy-paste code across files.
+
 ## Svelte 5 Conventions
 
 - Use runes: `$props()`, `$state()`, `$derived()`, `$effect()`, `$bindable()`.
@@ -34,6 +42,8 @@
 - Use scoped `<style lang="scss">` blocks in `.svelte` files for component styles.
 - If you need a new button look, extend the shared `Button` component instead of creating ad-hoc buttons.
 - Avoid hard-coded colors — prefer SCSS variables or CSS custom properties defined in `global.scss`.
+- Do not use BEM naming (`block__element--modifier`). Svelte scopes styles automatically — use simple, descriptive class names (`.content`, `.spinner`, `.primary`).
+- Keep SCSS clean and DRY: avoid deep nesting (max 2 levels), extract repeated values into CSS custom properties, and use `&:hover`, `&:disabled` pseudo-selectors instead of separate classes.
 
 ## Data Fetching (TanStack Query)
 
@@ -48,6 +58,7 @@
 - Use route groups `(groupName)/` for distinct layouts without affecting the URL.
 - Use `+page.svelte` for pages, `+layout.svelte` for layouts, `+error.svelte` for error boundaries.
 - Do not use `+page.server.ts` or `+layout.server.ts` for data loading — all data comes from the external API via TanStack Query.
+- Use `localizeHref()` from `$lib/paraglide/runtime` for internal links to ensure proper locale handling. Do not hardcode `href="/path"`.
 
 ## i18n (Paraglide)
 
@@ -59,3 +70,9 @@
 - Always use `localizeHref()` from `$lib/paraglide/runtime` for internal links — never raw `href="/path"`.
 - The base locale (`en`) has no URL prefix. Non-base locales get a prefix (e.g., `/pt-br/auth/login`).
 - To switch locale, link to `localizeHref(currentPath, { locale: 'pt-br' })` — Paraglide handles the rest.
+- Use `import * as m from '$lib/paraglide/messages.js';` to access localized messages.
+
+## Icons
+- Use `@iconify/svelte` for icons. Import specific icons from `@iconify-icons/` (e.g., `import { home } from '@iconify-icons/mdi/home';`).
+- Do not use SVG files or other icon libraries. Stick to Iconify for consistency and ease of use.
+- For common icons (e.g., theme toggle), consider creating a shared `Icon` component that wraps Iconify and provides consistent styling.
