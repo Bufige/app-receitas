@@ -368,6 +368,7 @@
 		cursor: pointer;
 		color: var(--text);
 		flex-shrink: 0;
+		view-transition-name: theme-switch;
 	}
 
 	.track {
@@ -419,7 +420,7 @@
 		border-radius: 50%;
 		background-color: var(--surface);
 		box-shadow: var(--soft-box-shadow);
-		transition: transform 0.3s;
+		transition: left 0.3s ease;
 
 		@media (prefers-reduced-motion: reduce) {
 			transition: none;
@@ -427,12 +428,10 @@
 	}
 
 	.dark .thumb {
-		transform: translateY(-50%)
-			translateX(calc(var(--track-width) - var(--thumb-size) - var(--gap) * 2));
+		left: calc(var(--track-width) - var(--thumb-size) - var(--gap));
 	}
 
 	:global([data-theme="dark"]) .thumb {
-		transform: translateY(-50%)
-			translateX(calc(var(--track-width) - var(--thumb-size) - var(--gap) * 2));
+		left: calc(var(--track-width) - var(--thumb-size) - var(--gap));
 	}
 </style>

@@ -155,6 +155,22 @@ select {
 	border: 0;
 }
 
+// Exclude theme switch from circle-expand so it updates instantly
+// without crossfade artifacts between old/new snapshots
+::view-transition-old(theme-switch) {
+	animation: none;
+	opacity: 0;
+}
+
+::view-transition-new(theme-switch) {
+	animation: none;
+	opacity: 1;
+}
+
+::view-transition-group(theme-switch) {
+	animation: none;
+}
+
 // Theme transition: circle expand from click origin
 ::view-transition-old(root),
 ::view-transition-new(root) {
