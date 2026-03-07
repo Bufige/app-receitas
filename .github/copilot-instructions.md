@@ -39,6 +39,7 @@
 ## Styling & UI
 
 - **Mobile-first is imperative.** Base styles target small screens; desktop enhancements use `min-width` media queries via breakpoint mixins (`@include md`, `@include lg`, etc.) from `$lib/assets/styles/breakpoints.scss`. Never use `max-width` queries.
+- **Accessibility is imperative.** Every interactive element must be keyboard-operable and have a visible focus indicator (`:focus-visible`). Use semantic HTML elements (`<header>`, `<nav>`, `<main>`, `<footer>`, `<button>`, `<a>`) — never use `<div>` for interactive controls. Add proper ARIA attributes when native semantics are insufficient (e.g., custom dropdowns need `role="listbox"`, `role="option"`, `aria-expanded`, `aria-selected`). All images/icons must have `aria-label` or `aria-hidden="true"` as appropriate. Announce dynamic state changes (theme, locale) via the `announce()` utility from `$lib/utils/announce.ts` and the `#announcer` live region. Respect `prefers-reduced-motion` — reduced-motion styles are global but add `@media (prefers-reduced-motion: reduce)` for component-specific transitions when needed. Use the `.sr-only` class from `global.scss` for visually hidden but screen-reader-accessible content. Never hardcode ARIA label strings — use i18n keys with the `a11y_` prefix.
 - Prefer existing components in `$lib/components/*` before creating new ones.
 - Use scoped `<style lang="scss">` blocks in `.svelte` files for component styles.
 - If you need a new button look, extend the shared `Button` component instead of creating ad-hoc buttons.

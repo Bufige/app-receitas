@@ -4,6 +4,7 @@
 	import { locales, localizeHref, getLocale } from "$lib/paraglide/runtime";
 	import { useAuthStore } from "$lib/stores/auth.svelte";
 	import { useThemeStore } from "$lib/stores/theme.svelte";
+	import { announce } from "$lib/utils/announce";
 	import Icon from "@iconify/svelte";
 	import Logo from "$lib/assets/logo.svg?component";
 
@@ -11,6 +12,8 @@
 		theme = useThemeStore();
 
 	let open = $state(false);
+	let activeIndex = $state(-1);
+	let triggerRef = $state<HTMLButtonElement | null>(null);
 
 	const localeMap: Record<string, { label: string; flag: string }> = {
 		en: { label: "EN", flag: "circle-flags:us" },
@@ -19,8 +22,74 @@
 
 	function selectLocale(locale: string) {
 		open = false;
+		activeIndex = -1;
+		triggerRef?.focus();
 		if (locale !== getLocale()) {
+			announce(
+				m.a11y_locale_changed({ locale: localeMap[locale]?.label ?? locale }),
+			);
 			window.location.href = localizeHref(page.url.pathname, { locale });
+		}
+	}
+
+	function toggleTheme() {
+		theme.toggle();
+		const next = theme.current === "dark" ? "dark" : "light";
+		announce(m.a11y_theme_changed({ theme: next }));
+	}
+
+	function openDropdown() {
+		open = true;
+		activeIndex = locales.indexOf(getLocale());
+	}
+
+	function closeDropdown() {
+		open = false;
+		activeIndex = -1;
+		triggerRef?.focus();
+	}
+
+	function handleTriggerKeydown(event: KeyboardEvent) {
+		switch (event.key) {
+			case "ArrowDown":
+			case "Enter":
+			case " ":
+				event.preventDefault();
+				openDropdown();
+				break;
+			case "Escape":
+				if (open) {
+					event.preventDefault();
+					closeDropdown();
+				}
+				break;
+		}
+	}
+
+	function handleDropdownKeydown(event: KeyboardEvent) {
+		switch (event.key) {
+			case "ArrowDown":
+				event.preventDefault();
+				activeIndex = (activeIndex + 1) % locales.length;
+				break;
+			case "ArrowUp":
+				event.preventDefault();
+				activeIndex = (activeIndex - 1 + locales.length) % locales.length;
+				break;
+			case "Enter":
+			case " ":
+				event.preventDefault();
+				if (activeIndex >= 0) {
+					selectLocale(locales[activeIndex]);
+				}
+				break;
+			case "Escape":
+				event.preventDefault();
+				closeDropdown();
+				break;
+			case "Tab":
+				closeDropdown();
+				break;
 		}
 	}
 
@@ -28,24 +97,37 @@
 		const target = event.target as HTMLElement;
 		if (!target.closest(".locale-picker")) {
 			open = false;
+			activeIndex = -1;
 		}
 	}
+
+	$effect(() => {
+		if (open && activeIndex >= 0) {
+			const option = document.querySelector(
+				".locale-option.focused",
+			) as HTMLElement | null;
+			option?.focus();
+		}
+	});
 </script>
 
 <svelte:window onclick={handleClickOutside} />
 
-<div class="header">
-	<a class="logo" href={localizeHref("/")}>
-		<Logo />
-		<span class="title">Saudade Svelte</span>
+<header class="header">
+	<a class="logo" href={localizeHref("/")} aria-label={m.a11y_logo_label()}>
+		<Logo aria-hidden="true" />
+		<span class="title">Saudade Pet</span>
 	</a>
-	<nav>
+	<nav aria-label={m.a11y_main_navigation()}>
 		<div class="locale-picker">
 			<button
+				bind:this={triggerRef}
 				class="locale-trigger"
-				onclick={() => (open = !open)}
-				aria-label="Select language"
+				onclick={() => (open ? closeDropdown() : openDropdown())}
+				onkeydown={handleTriggerKeydown}
+				aria-label={m.a11y_select_language()}
 				aria-expanded={open}
+				aria-haspopup="listbox"
 			>
 				<Icon
 					icon={localeMap[getLocale()]?.flag ?? "circle-flags:us"}
@@ -54,26 +136,39 @@
 				/>
 				<span class="locale-label">{localeMap[getLocale()]?.label ?? "EN"}</span
 				>
-				<span class="locale-chevron">
+				<span class="locale-chevron" aria-hidden="true">
 					<Icon icon="mdi:chevron-down" width="14" height="14" />
 				</span>
 			</button>
 			{#if open}
-				<ul class="locale-dropdown">
-					{#each locales as locale}
-						<li>
-							<button
-								class="locale-option"
-								class:active={locale === getLocale()}
-								onclick={() => selectLocale(locale)}
-							>
-								<Icon
-									icon={localeMap[locale]?.flag ?? locale}
-									width="18"
-									height="18"
-								/>
-								<span>{localeMap[locale]?.label ?? locale.toUpperCase()}</span>
-							</button>
+				<ul
+					class="locale-dropdown"
+					role="listbox"
+					aria-label={m.a11y_select_language()}
+					onkeydown={handleDropdownKeydown}
+				>
+					{#each locales as locale, i}
+						<li
+							role="option"
+							aria-selected={locale === getLocale()}
+							class="locale-option"
+							class:active={locale === getLocale()}
+							class:focused={i === activeIndex}
+							onclick={() => selectLocale(locale)}
+							onkeydown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									selectLocale(locale);
+								}
+							}}
+							tabindex={i === activeIndex ? 0 : -1}
+						>
+							<Icon
+								icon={localeMap[locale]?.flag ?? locale}
+								width="18"
+								height="18"
+							/>
+							<span>{localeMap[locale]?.label ?? locale.toUpperCase()}</span>
 						</li>
 					{/each}
 				</ul>
@@ -81,13 +176,15 @@
 		</div>
 		<button
 			class="switch"
-			onclick={() => theme.toggle()}
-			aria-label="Toggle theme"
+			onclick={toggleTheme}
+			aria-label={m.a11y_toggle_theme()}
 			class:dark={theme.current === "dark"}
+			role="switch"
+			aria-checked={theme.current === "dark"}
 		>
 			<span class="track">
-				<Icon icon="mdi:weather-sunny" />
-				<Icon icon="mdi:weather-night" />
+				<Icon icon="mdi:weather-sunny" aria-hidden="true" />
+				<Icon icon="mdi:weather-night" aria-hidden="true" />
 				<span class="thumb"></span>
 			</span>
 		</button>
@@ -95,12 +192,12 @@
 			<a href={localizeHref("/login")}>{m.auth_login()}</a>
 		{/if}
 	</nav>
-</div>
+</header>
 
 <style lang="scss">
 	@use "$lib/assets/styles/breakpoints" as *;
 
-	.header {
+	header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -231,7 +328,8 @@
 		font-size: 0.75rem;
 		white-space: nowrap;
 
-		&:hover {
+		&:hover,
+		&.focused {
 			background-color: var(--border);
 		}
 
@@ -283,6 +381,10 @@
 		background-color: var(--surface);
 		box-shadow: var(--soft-box-shadow);
 		transition: transform 0.3s;
+
+		@media (prefers-reduced-motion: reduce) {
+			transition: none;
+		}
 	}
 
 	.dark .thumb {

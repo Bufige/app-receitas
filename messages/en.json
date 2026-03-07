@@ -7,5 +7,18 @@
 	"auth_register_text": "Create an account to get started",
 	"footer_rights": "© 2026 Saudade Pet, Inc.",
 	"footer_privacy_policy": "Privacy Policy",
-	"footer_terms_of_service": "Terms of Service"
+	"footer_terms_of_service": "Terms of Service",
+	"seo_home_title": "Home",
+	"seo_home_description": "Saudade Pet — Find, adopt, and connect with pets near you. A community for pet lovers.",
+	"seo_login_title": "Login",
+	"seo_login_description": "Log in to your Saudade Pet account to access your profile and connect with pets.",
+	"seo_register_title": "Register",
+	"seo_register_description": "Create your Saudade Pet account and start connecting with pets in your area.",
+	"a11y_skip_to_content": "Skip to main content",
+	"a11y_main_navigation": "Main navigation",
+	"a11y_select_language": "Select language",
+	"a11y_toggle_theme": "Toggle color theme",
+	"a11y_logo_label": "Saudade Pet — Go to homepage",
+	"a11y_locale_changed": "Language changed to {locale}",
+	"a11y_theme_changed": "Theme changed to {theme}"
 }

@@ -2,11 +2,14 @@
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
 	import { useThemeStore } from "$lib/stores/theme.svelte";
+	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import Button from "@components/ui/Button/index.svelte";
 	import ButtonGroup from "@components/ui/ButtonGroup/index.svelte";
 
 	const theme = useThemeStore();
 </script>
+
+<SEO title={m.seo_home_title()} description={m.seo_home_description()} />
 
 <h1 class="greeting">Welcome to SvelteKit</h1>
 <p>
