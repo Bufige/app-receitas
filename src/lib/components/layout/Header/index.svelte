@@ -369,27 +369,40 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.25rem;
-		width: 3.25rem;
-		height: 1.75rem;
-		padding: 0 0.3rem;
+		width: 3rem;
+		height: 1.625rem;
+		padding: 0 0.25rem;
 		border-radius: 999px;
 		background-color: var(--border);
 		position: relative;
 		transition: background-color 0.3s;
 		font-size: 0.75rem;
+		overflow: hidden;
+
+		:global(svg) {
+			width: 0.75rem;
+			height: 0.75rem;
+			flex-shrink: 0;
+		}
 
 		@include md {
-			font-size: 0.875rem;
+			width: 3.25rem;
+			height: 1.75rem;
+			padding: 0 0.3rem;
+
+			:global(svg) {
+				width: 0.875rem;
+				height: 0.875rem;
+			}
 		}
 	}
 
 	.thumb {
 		position: absolute;
-		top: 3px;
-		left: 3px;
-		width: 1.25rem;
-		height: 1.25rem;
+		top: 5x;
+		left: 5px;
+		width: 1.125rem;
+		height: 1.125rem;
 		border-radius: 50%;
 		background-color: var(--surface);
 		box-shadow: var(--soft-box-shadow);
@@ -398,13 +411,28 @@
 		@media (prefers-reduced-motion: reduce) {
 			transition: none;
 		}
+
+		@include md {
+			top: 3px;
+			left: 3px;
+			width: 1.25rem;
+			height: 1.25rem;
+		}
 	}
 
 	.dark .thumb {
-		transform: translateX(1.5rem);
+		transform: translateX(1.25rem);
+
+		@include md {
+			transform: translateX(1.375rem);
+		}
 	}
 
 	:global([data-theme="dark"]) .thumb {
-		transform: translateX(1.5rem);
+		transform: translateX(1.25rem);
+
+		@include md {
+			transform: translateX(1.375rem);
+		}
 	}
 </style>
