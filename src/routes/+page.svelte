@@ -13,12 +13,14 @@
 
 <SEO title={m.seo_home_title()} description={m.seo_home_description()} />
 <div class="content">
-	<h1 class="title">
-		{m.home_content_title()}
-		<span class="highlight">{m.home_content_title_highlight()}</span>
-		{m.home_content_title_suffix()}
-	</h1>
-	<p class="description">{m.home_content_description()}</p>
+	<div class="text-group">
+		<h1 class="title">
+			{m.home_content_title()}
+			<span class="highlight">{m.home_content_title_highlight()}</span>
+			{m.home_content_title_suffix()}
+		</h1>
+		<p class="description">{m.home_content_description()}</p>
+	</div>
 	<div class="actions">
 		<Button
 			variant="primary"
@@ -49,6 +51,19 @@
 			gap: 1rem;
 		}
 	}
+
+	.text-group {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		margin: auto 0;
+
+		@include md {
+			gap: 1rem;
+			margin: 0;
+		}
+	}
 	.title {
 		font-size: 2rem;
 		font-weight: 700;
@@ -72,7 +87,6 @@
 	}
 
 	.actions {
-		margin-top: auto;
 		width: 100%;
 		max-width: 400px;
 
