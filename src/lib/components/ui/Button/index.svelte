@@ -2,7 +2,12 @@
 	import Icon from "@iconify/svelte";
 	import type { Snippet } from "svelte";
 
-	export type ButtonVariant = "default" | "primary" | "secondary" | "danger";
+	export type ButtonVariant =
+		| "default"
+		| "primary"
+		| "secondary"
+		| "danger"
+		| "outline";
 	export type ButtonSize = "small" | "medium" | "large";
 
 	interface ButtonProps {
@@ -131,6 +136,18 @@
 
 		&:hover:not(:disabled) {
 			background-color: var(--error-hover);
+		}
+	}
+
+	.outline {
+		background-color: var(--white);
+		border-color: var(--primary);
+		color: var(--primary);
+		font-weight: 600;
+		font-size: 0.875rem;
+
+		&:hover:not(:disabled) {
+			background-color: color-mix(in srgb, var(--primary) 8%, var(--white));
 		}
 	}
 
