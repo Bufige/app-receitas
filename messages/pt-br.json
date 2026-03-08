@@ -20,5 +20,9 @@
 	"a11y_toggle_theme": "Alternar tema de cores",
 	"a11y_logo_label": "Saudade Pet — Ir para a página inicial",
 	"a11y_locale_changed": "Idioma alterado para {locale}",
-	"a11y_theme_changed": "Tema alterado para {theme}"
+	"a11y_theme_changed": "Tema alterado para {theme}",
+	"home_content_title": "Ele fez parte da sua vida, mas você foi a",
+	"home_content_title_highlight": "vida",
+	"home_content_title_suffix": "inteira dele",
+	"home_content_description": "Transforme suas fotos e vídeos favoritos em um memorial digital. Um espaço para alegria, não apenas lembrança."
 }

@@ -8,6 +8,7 @@
 	interface ButtonProps {
 		variant?: ButtonVariant;
 		size?: ButtonSize;
+		round?: boolean;
 		loading?: boolean;
 		disabled?: boolean;
 		onclick?: () => void;
@@ -17,6 +18,7 @@
 	let {
 		variant = "default",
 		size = "medium",
+		round = false,
 		loading = false,
 		disabled = false,
 		onclick,
@@ -24,7 +26,12 @@
 	}: ButtonProps = $props();
 </script>
 
-<button class="btn {variant} {size}" disabled={disabled || loading} {onclick}>
+<button
+	class="btn {variant} {size}"
+	class:round
+	disabled={disabled || loading}
+	{onclick}
+>
 	{#if loading}
 		<span class="spinner">
 			<Icon icon="svg-spinners:ring-resize" width="1em" height="1em" />
@@ -58,12 +65,16 @@
 		white-space: nowrap;
 
 		@include md {
-			width: auto;
+			width: 320px;
 		}
 
 		&:disabled {
 			cursor: not-allowed;
 			opacity: 0.6;
+		}
+
+		&.round {
+			border-radius: 999px;
 		}
 	}
 

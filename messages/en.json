@@ -20,5 +20,9 @@
 	"a11y_toggle_theme": "Toggle color theme",
 	"a11y_logo_label": "Saudade Pet — Go to homepage",
 	"a11y_locale_changed": "Language changed to {locale}",
-	"a11y_theme_changed": "Theme changed to {theme}"
+	"a11y_theme_changed": "Theme changed to {theme}",
+	"home_content_title": "He was part of your life, but you were his whole",
+	"home_content_title_highlight": "life",
+	"home_content_title_suffix": "",
+	"home_content_description": "Turn your favorite photos and videos into a digital memorial. A space for joy, not only remembrance."
 }

@@ -63,6 +63,8 @@
 
 	main {
 		flex: 1;
+		display: flex;
+		flex-direction: column;
 		background-image: var(--bg-image);
 		background-color: var(--bg-overlay);
 		background-size: cover;
