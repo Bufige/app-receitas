@@ -68,6 +68,7 @@
 	// Hero background
 	--bg-overlay: color-mix(in srgb, var(--bg) 80%, transparent);
 	--bg-offset: 90%;
+	--bg-image: url('/background-day.webp');
 }
 
 [data-theme='dark'] {
@@ -94,6 +95,7 @@
 	// Hero background
 	--bg-overlay: var(--bg);
 	--bg-offset: 85%;
+	--bg-image: url('/background-night.webp');
 }
 
 *,

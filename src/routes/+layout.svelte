@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
 	import "$lib/assets/styles/global.scss";
-	import bgDay from "$lib/assets/background-day.webp";
-	import bgNight from "$lib/assets/background-night.webp";
 	import Footer from "$lib/components/layout/Footer/index.svelte";
 	import Header from "$lib/components/layout/Header/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
@@ -12,8 +10,6 @@
 	let { children } = $props();
 
 	const theme = useThemeStore();
-
-	const bgImage = $derived(theme.current === "dark" ? bgNight : bgDay);
 
 	if (browser) {
 		theme.init();
@@ -30,11 +26,7 @@
 
 <div class="app">
 	<Header />
-	<main
-		id="main-content"
-		class="container"
-		style:background-image="url({bgImage})"
-	>
+	<main id="main-content" class="container">
 		<QueryClientProvider client={queryClient}>
 			{@render children()}
 		</QueryClientProvider>
@@ -71,6 +63,7 @@
 
 	main {
 		flex: 1;
+		background-image: var(--bg-image);
 		background-color: var(--bg-overlay);
 		background-size: cover;
 		background-position: var(--bg-offset) 10%;
