@@ -8,9 +8,9 @@
 	interface FileUploadProps {
 		files: {
 			id: string;
-			fileName: string;
-			fileSize: number;
-			fileType: string;
+			file_name: string;
+			file_size: number;
+			file_type: string;
 		}[];
 		getFile: (id: string) => File | undefined;
 		maxFiles: number;
@@ -118,8 +118,8 @@
 		return URL.createObjectURL(file);
 	}
 
-	function isVideo(fileType: string): boolean {
-		return fileType.startsWith("video/");
+	function isVideo(file_type: string): boolean {
+		return file_type.startsWith("video/");
 	}
 </script>
 
@@ -154,14 +154,14 @@
 				{#each files as item, i (item.id)}
 					{@const previewUrl = getPreviewUrl(item.id)}
 					<div class="floating-photo" style={getPhotoStyle(item.id)}>
-						{#if previewUrl && !isVideo(item.fileType)}
+						{#if previewUrl && !isVideo(item.file_type)}
 							<img
 								src={previewUrl}
 								alt=""
 								class="floating-image"
 								loading="lazy"
 							/>
-						{:else if previewUrl && isVideo(item.fileType)}
+						{:else if previewUrl && isVideo(item.file_type)}
 							<video
 								src={previewUrl}
 								class="floating-video"
@@ -183,7 +183,7 @@
 								e.stopPropagation();
 								onremovefile(item.id);
 							}}
-							aria-label="{m.memorial_upload_remove()} {item.fileName}"
+							aria-label="{m.memorial_upload_remove()} {item.file_name}"
 						>
 							<Icon icon={closeIcon} width="1em" height="1em" />
 						</button>

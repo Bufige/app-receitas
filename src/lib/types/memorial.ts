@@ -5,15 +5,15 @@ export type PetDetails = {
 	name: string;
 	species: PetSpecies | "";
 	sex: PetSex | "";
-	birthDate: string;
-	passingDate: string;
+	birth_date: string;
+	passing_date: string;
 };
 
 export type MediaItem = {
 	id: string;
-	fileName: string;
-	fileSize: number;
-	fileType: string;
+	file_name: string;
+	file_size: number;
+	file_type: string;
 	order: number;
 };
 
@@ -22,8 +22,8 @@ export type TributeData = {
 };
 
 export type MemorialDraft = {
-	currentStep: number;
-	petDetails: PetDetails;
+	current_step: number;
+	pet_details: PetDetails;
 	media: MediaItem[];
 	tribute: TributeData;
 };
@@ -31,15 +31,15 @@ export type MemorialDraft = {
 export type MemorialMediaUploadResponse = {
 	id: string;
 	url: string;
-	thumbnailUrl: string;
+	thumbnail_url: string;
 };
 
 export type Memorial = {
 	id: string;
-	petDetails: PetDetails;
+	pet_details: PetDetails;
 	media: MemorialMediaUploadResponse[];
 	tribute: TributeData;
-	userId: string | null;
-	anonymousSessionId: string | null;
-	createdAt: string;
+	user_id: string | null;
+	anonymous_session_id: string | null;
+	created_at: string;
 };

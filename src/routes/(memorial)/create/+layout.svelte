@@ -77,7 +77,7 @@
 			}
 
 			const result = await memorialApi.create({
-				petDetails: draft.petDetails,
+				pet_details: draft.petDetails,
 				media: draft.media,
 				tribute: draft.tribute,
 			});

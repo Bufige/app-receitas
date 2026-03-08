@@ -14,8 +14,8 @@ function defaultPetDetails(): PetDetails {
 		name: "",
 		species: "",
 		sex: "",
-		birthDate: "",
-		passingDate: "",
+		birth_date: "",
+		passing_date: "",
 	};
 }
 
@@ -25,8 +25,8 @@ function defaultTribute(): TributeData {
 
 function defaultDraft(): MemorialDraft {
 	return {
-		currentStep: 1,
-		petDetails: defaultPetDetails(),
+		current_step: 1,
+		pet_details: defaultPetDetails(),
 		media: [],
 		tribute: defaultTribute(),
 	};
@@ -56,8 +56,8 @@ function saveDraft(draft: MemorialDraft) {
 // In-memory file map (not serializable to localStorage)
 const fileMap = new Map<string, File>();
 
-let currentStep = $state(1);
-let petDetails = $state<PetDetails>(defaultPetDetails());
+let current_step = $state(1);
+let pet_details = $state<PetDetails>(defaultPetDetails());
 let media = $state<MediaItem[]>([]);
 let tribute = $state<TributeData>(defaultTribute());
 let initialized = $state(false);
@@ -65,8 +65,8 @@ let initialized = $state(false);
 function hydrateFromStorage() {
 	if (initialized) return;
 	const draft = loadDraft();
-	currentStep = draft.currentStep;
-	petDetails = draft.petDetails;
+	current_step = draft.current_step;
+	pet_details = draft.pet_details;
 	media = draft.media;
 	tribute = draft.tribute;
 	initialized = true;
@@ -74,8 +74,8 @@ function hydrateFromStorage() {
 
 function persist() {
 	saveDraft({
-		currentStep,
-		petDetails,
+		current_step,
+		pet_details,
 		media,
 		tribute,
 	});
@@ -88,18 +88,18 @@ export function useMemorialDraft() {
 
 	return {
 		get currentStep() {
-			return currentStep;
+			return current_step;
 		},
 		set currentStep(step: number) {
-			currentStep = step;
+			current_step = step;
 			persist();
 		},
 
 		get petDetails() {
-			return petDetails;
+			return pet_details;
 		},
 		updatePetDetails(updates: Partial<PetDetails>) {
-			petDetails = { ...petDetails, ...updates };
+			pet_details = { ...pet_details, ...updates };
 			persist();
 		},
 
@@ -110,9 +110,9 @@ export function useMemorialDraft() {
 			if (media.length >= MAX_MEDIA) return;
 			const item: MediaItem = {
 				id: crypto.randomUUID(),
-				fileName: file.name,
-				fileSize: file.size,
-				fileType: file.type,
+				file_name: file.name,
+				file_size: file.size,
+				file_type: file.type,
 				order: media.length,
 			};
 			fileMap.set(item.id, file);
@@ -149,12 +149,12 @@ export function useMemorialDraft() {
 		},
 
 		get isStep1Valid() {
-			return petDetails.name.trim().length > 0 && petDetails.species !== "";
+			return pet_details.name.trim().length > 0 && pet_details.species !== "";
 		},
 
 		reset() {
-			currentStep = 1;
-			petDetails = defaultPetDetails();
+			current_step = 1;
+			pet_details = defaultPetDetails();
 			media = [];
 			tribute = defaultTribute();
 			fileMap.clear();

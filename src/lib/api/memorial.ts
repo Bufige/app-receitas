@@ -40,7 +40,7 @@ export const memorialApi = {
 		return response.json();
 	},
 
-	create(draft: Omit<MemorialDraft, "currentStep">) {
+	create(draft: Omit<MemorialDraft, "current_step">) {
 		return api.post<RequestResponse<Memorial>>("/memorials", draft);
 	},
 };

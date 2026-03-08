@@ -6,7 +6,6 @@ import { memorialApi } from "$lib/api/memorial";
 import type {
 	MemorialDraft,
 } from "$lib/types/memorial";
-import type { RequestResponse } from "$lib/types/request";
 import { queryKeys } from "./
 export function createUploadMediaMutation() {
 	return createMutation(() => ({
@@ -18,7 +17,7 @@ export function createMemorialMutation() {
 	const queryClient = useQueryClient();
 
 	return createMutation(() => ({
-		mutationFn: (draft: Omit<MemorialDraft, "currentStep">) =>
+		mutationFn: (draft: Omit<MemorialDraft, "current_step">) =>
 			memorialApi.create(draft),
 		onSuccess: () => {
 			queryClient.invalidateQueries({

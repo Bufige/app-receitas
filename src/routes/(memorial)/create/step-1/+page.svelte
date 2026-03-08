@@ -36,12 +36,12 @@
 
 	function handleBirthDateInput(e: Event) {
 		const value = (e.target as HTMLInputElement).value;
-		draft.updatePetDetails({ birthDate: value });
+		draft.updatePetDetails({ birth_date: value });
 	}
 
 	function handlePassingDateInput(e: Event) {
 		const value = (e.target as HTMLInputElement).value;
-		draft.updatePetDetails({ passingDate: value });
+		draft.updatePetDetails({ passing_date: value });
 	}
 </script>
 
@@ -107,7 +107,7 @@
 			id="pet-birth-date"
 			type="date"
 			class="date-input"
-			value={draft.petDetails.birthDate}
+			value={draft.petDetails.birth_date}
 			onchange={handleBirthDateInput}
 		/>
 	</div>
@@ -120,7 +120,7 @@
 			id="pet-passing-date"
 			type="date"
 			class="date-input"
-			value={draft.petDetails.passingDate}
+			value={draft.petDetails.passing_date}
 			onchange={handlePassingDateInput}
 		/>
 	</div>

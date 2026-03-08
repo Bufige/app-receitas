@@ -27,8 +27,8 @@
 		return URL.createObjectURL(file);
 	}
 
-	function isVideo(fileType: string): boolean {
-		return fileType.startsWith("video/");
+	function isVideo(file_type: string): boolean {
+		return file_type.startsWith("video/");
 	}
 </script>
 
@@ -63,16 +63,16 @@
 					<dd>{sexLabels[draft.petDetails.sex]?.() ?? draft.petDetails.sex}</dd>
 				</div>
 			{/if}
-			{#if draft.petDetails.birthDate}
+			{#if draft.petDetails.birth_date}
 				<div class="detail-row">
 					<dt>{m.memorial_birth_date_label()}</dt>
-					<dd>{draft.petDetails.birthDate}</dd>
+					<dd>{draft.petDetails.birth_date}</dd>
 				</div>
 			{/if}
-			{#if draft.petDetails.passingDate}
+			{#if draft.petDetails.passing_date}
 				<div class="detail-row">
 					<dt>{m.memorial_passing_date_label()}</dt>
-					<dd>{draft.petDetails.passingDate}</dd>
+					<dd>{draft.petDetails.passing_date}</dd>
 				</div>
 			{/if}
 		</dl>
@@ -91,14 +91,14 @@
 				{#each draft.media as item (item.id)}
 					{@const previewUrl = getPreviewUrl(item.id)}
 					<div class="media-thumb">
-						{#if previewUrl && !isVideo(item.fileType)}
+						{#if previewUrl && !isVideo(item.file_type)}
 							<img
 								src={previewUrl}
-								alt={item.fileName}
+								alt={item.file_name}
 								class="thumb-image"
 								loading="lazy"
 							/>
-						{:else if isVideo(item.fileType)}
+						{:else if isVideo(item.file_type)}
 							<div class="thumb-placeholder">
 								<Icon icon={videoIcon} width="1.5em" height="1.5em" />
 							</div>
