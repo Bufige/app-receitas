@@ -53,5 +53,10 @@
 	"auth_forgot_subtitle": "Digite seu e-mail e enviaremos um link para redefinir sua senha.",
 	"auth_forgot_submit": "Enviar link de redefinição",
 	"auth_forgot_remembered": "Lembrou da senha?",
-	"auth_forgot_back_to_login": "Voltar ao login"
+	"auth_forgot_back_to_login": "Voltar ao login",
+	"auth_magic_link_title": "Link mágico",
+	"auth_magic_link_subtitle": "Digite seu e-mail e enviaremos um link para entrar instantaneamente — sem precisar de senha.",
+	"auth_magic_link_submit": "Enviar link mágico",
+	"auth_magic_link_prefer_password": "Prefere usar uma senha?",
+	"auth_magic_link_back_to_login": "Voltar ao login"
 }

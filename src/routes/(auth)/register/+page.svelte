@@ -25,10 +25,12 @@
 			{m.auth_continue_google()}
 		</Button>
 
-		<Button variant="outline" size="medium" round>
-			<Icon icon={linkVariant} width="1.25em" height="1.25em" />
-			{m.auth_magic_link()}
-		</Button>
+		<a href={localizeHref("/magic-link")} class="magic-link-btn">
+			<Button variant="outline" size="medium" round>
+				<Icon icon={linkVariant} width="1.25em" height="1.25em" />
+				{m.auth_magic_link()}
+			</Button>
+		</a>
 	</div>
 
 	<div class="divider">
@@ -96,6 +98,12 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 0.75rem;
+	}
+
+	.magic-link-btn {
+		width: 100%;
+		display: flex;
+		justify-content: center;
 	}
 
 	.divider {

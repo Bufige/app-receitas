@@ -53,5 +53,10 @@
 	"auth_forgot_subtitle": "Enter your email and we'll send you a link to reset your password.",
 	"auth_forgot_submit": "Send reset link",
 	"auth_forgot_remembered": "Remembered your password?",
-	"auth_forgot_back_to_login": "Back to login"
+	"auth_forgot_back_to_login": "Back to login",
+	"auth_magic_link_title": "Magic link",
+	"auth_magic_link_subtitle": "Enter your email and we'll send you a link to sign in instantly — no password needed.",
+	"auth_magic_link_submit": "Send magic link",
+	"auth_magic_link_prefer_password": "Prefer using a password?",
+	"auth_magic_link_back_to_login": "Back to login"
 }
