@@ -57,6 +57,9 @@
 	"auth_magic_link_title": "Magic link",
 	"auth_magic_link_subtitle": "Enter your email and we'll send you a link to sign in instantly — no password needed.",
 	"auth_magic_link_submit": "Send magic link",
+	"auth_magic_link_resend": "Resend magic link",
+	"auth_magic_link_cooldown": "Resend in {seconds}s",
+	"auth_magic_link_sent": "We sent a link to {email}. Check your inbox.",
 	"auth_magic_link_prefer_password": "Prefer using a password?",
 	"auth_magic_link_back_to_login": "Back to login"
 }
