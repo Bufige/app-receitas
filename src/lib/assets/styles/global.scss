@@ -64,6 +64,10 @@
 	--box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
 	--high-box-shadow: rgba(0, 0, 0, 0.2) 0px 8px 24px;
 	--soft-box-shadow: rgba(0, 0, 0, 0.05) 0px 2px 8px;
+
+	// Hero background
+	--bg-overlay: color-mix(in srgb, var(--bg) 80%, transparent);
+	--bg-offset: 90%;
 }
 
 [data-theme='dark'] {
@@ -86,6 +90,10 @@
 	--box-shadow: rgba(0, 0, 0, 0.5) 0px 4px 12px;
 	--high-box-shadow: rgba(0, 0, 0, 0.7) 0px 8px 24px;
 	--soft-box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 8px;
+
+	// Hero background
+	--bg-overlay: var(--bg);
+	--bg-offset: 85%;
 }
 
 *,
@@ -205,7 +213,6 @@ select {
 
 .container {
 	width: 100%;
-	max-width: 1280px;
 	margin: 0 auto;
 	padding: 1rem;
 

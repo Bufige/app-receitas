@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
 	import "$lib/assets/styles/global.scss";
+	import bgDay from "$lib/assets/background-day.webp";
+	import bgNight from "$lib/assets/background-night.webp";
 	import Footer from "$lib/components/layout/Footer/index.svelte";
 	import Header from "$lib/components/layout/Header/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
@@ -10,6 +12,8 @@
 	let { children } = $props();
 
 	const theme = useThemeStore();
+
+	const bgImage = $derived(theme.current === "dark" ? bgNight : bgDay);
 
 	if (browser) {
 		theme.init();
@@ -26,7 +30,11 @@
 
 <div class="app">
 	<Header />
-	<main id="main-content" class="container">
+	<main
+		id="main-content"
+		class="container"
+		style:background-image="url({bgImage})"
+	>
 		<QueryClientProvider client={queryClient}>
 			{@render children()}
 		</QueryClientProvider>
@@ -37,6 +45,8 @@
 <div aria-live="polite" aria-atomic="true" class="sr-only" id="announcer"></div>
 
 <style lang="scss">
+	@use "$lib/assets/styles/breakpoints" as *;
+
 	.skip-link {
 		position: absolute;
 		top: -100%;
@@ -61,5 +71,14 @@
 
 	main {
 		flex: 1;
+		background-color: var(--bg-overlay);
+		background-size: cover;
+		background-position: var(--bg-offset) 10%;
+		background-repeat: no-repeat;
+		background-blend-mode: overlay;
+
+		@include md {
+			background-position: center;
+		}
 	}
 </style>
