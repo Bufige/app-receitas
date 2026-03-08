@@ -22,9 +22,9 @@
 </script>
 
 <div class="magic-link">
-	<div class="header">
-		<h1 class="title">{m.auth_magic_link_title()}</h1>
-		<p class="subtitle">
+	<div class="auth-header">
+		<h1 class="auth-title">{m.auth_magic_link_title()}</h1>
+		<p class="auth-subtitle">
 			{#if sent}
 				{m.auth_magic_link_sent({ email })}
 			{:else}
@@ -34,7 +34,7 @@
 	</div>
 
 	{#if !sent}
-		<form class="form" onsubmit={handleSubmit}>
+		<form class="auth-form" onsubmit={handleSubmit}>
 			<Input
 				id="magic-link-email"
 				type="email"
@@ -77,7 +77,7 @@
 		</div>
 	{/if}
 
-	<p class="switch-prompt">
+	<p class="auth-switch-prompt">
 		{m.auth_magic_link_prefer_password()}
 		<a href={localizeHref("/login")}>{m.auth_magic_link_back_to_login()}</a>
 	</p>
@@ -90,47 +90,9 @@
 		gap: 1rem;
 	}
 
-	.header {
-		text-align: center;
-	}
-
-	.title {
-		font-size: 1.5rem;
-		font-weight: 700;
-	}
-
-	.subtitle {
-		font-size: 0.875rem;
-		color: var(--text-muted);
-		margin-top: 0.25rem;
-	}
-
-	.form {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 1rem;
-	}
-
 	.sent-actions {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-	}
-
-	.switch-prompt {
-		text-align: center;
-		font-size: 0.875rem;
-		color: var(--text-muted);
-
-		a {
-			color: var(--primary);
-			font-weight: 600;
-			transition: color 0.2s;
-
-			&:hover {
-				color: var(--primary-hover);
-			}
-		}
 	}
 </style>

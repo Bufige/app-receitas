@@ -9,12 +9,12 @@
 </script>
 
 <div class="forgot-password">
-	<div class="header">
-		<h1 class="title">{m.auth_forgot_title()}</h1>
-		<p class="subtitle">{m.auth_forgot_subtitle()}</p>
+	<div class="auth-header">
+		<h1 class="auth-title">{m.auth_forgot_title()}</h1>
+		<p class="auth-subtitle">{m.auth_forgot_subtitle()}</p>
 	</div>
 
-	<form class="form" onsubmit={(e) => e.preventDefault()}>
+	<form class="auth-form" onsubmit={(e) => e.preventDefault()}>
 		<Input
 			id="forgot-email"
 			type="email"
@@ -31,7 +31,7 @@
 		</Button>
 	</form>
 
-	<p class="switch-prompt">
+	<p class="auth-switch-prompt">
 		{m.auth_forgot_remembered()}
 		<a href={localizeHref("/login")}>{m.auth_forgot_back_to_login()}</a>
 	</p>
@@ -42,43 +42,5 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-
-	.header {
-		text-align: center;
-	}
-
-	.title {
-		font-size: 1.5rem;
-		font-weight: 700;
-	}
-
-	.subtitle {
-		font-size: 0.875rem;
-		color: var(--text-muted);
-		margin-top: 0.25rem;
-	}
-
-	.form {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.switch-prompt {
-		text-align: center;
-		font-size: 0.875rem;
-		color: var(--text-muted);
-
-		a {
-			color: var(--primary);
-			font-weight: 600;
-			transition: color 0.2s;
-
-			&:hover {
-				color: var(--primary-hover);
-			}
-		}
 	}
 </style>

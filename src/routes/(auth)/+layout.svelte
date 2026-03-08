@@ -36,7 +36,6 @@
 		width: 100%;
 		max-width: 420px;
 		background-color: color-mix(in srgb, var(--surface) 75%, transparent);
-		// backdrop-filter: blur(20px);
 		border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 		border-radius: 12px;
 		padding: 2rem 1.5rem;

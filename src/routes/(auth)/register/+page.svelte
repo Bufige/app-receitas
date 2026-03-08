@@ -14,18 +14,18 @@
 </script>
 
 <div class="register">
-	<div class="header">
-		<h1 class="title">{m.auth_register_title()}</h1>
-		<p class="subtitle">{m.auth_register_subtitle()}</p>
+	<div class="auth-header">
+		<h1 class="auth-title">{m.auth_register_title()}</h1>
+		<p class="auth-subtitle">{m.auth_register_subtitle()}</p>
 	</div>
 
-	<div class="social-buttons">
+	<div class="auth-social-buttons">
 		<Button variant="primary" size="medium" round>
 			<Icon icon={googleIcon} width="1.25em" height="1.25em" />
 			{m.auth_continue_google()}
 		</Button>
 
-		<a href={localizeHref("/magic-link")} class="magic-link-btn">
+		<a href={localizeHref("/magic-link")} class="auth-magic-link-btn">
 			<Button variant="outline" size="medium" round>
 				<Icon icon={linkVariant} width="1.25em" height="1.25em" />
 				{m.auth_magic_link()}
@@ -33,11 +33,11 @@
 		</a>
 	</div>
 
-	<div class="divider">
+	<div class="auth-divider">
 		<span>{m.auth_or_password()}</span>
 	</div>
 
-	<form class="form" onsubmit={(e) => e.preventDefault()}>
+	<form class="auth-form" onsubmit={(e) => e.preventDefault()}>
 		<Input
 			id="register-email"
 			type="email"
@@ -65,7 +65,7 @@
 		</Button>
 	</form>
 
-	<p class="switch-prompt">
+	<p class="auth-switch-prompt">
 		{m.auth_has_account()}
 		<a href={localizeHref("/login")}>{m.auth_has_account_link()}</a>
 	</p>
@@ -76,76 +76,5 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1.5rem;
-	}
-
-	.header {
-		text-align: center;
-	}
-
-	.title {
-		font-size: 1.5rem;
-		font-weight: 700;
-	}
-
-	.subtitle {
-		font-size: 0.875rem;
-		color: var(--text-muted);
-		margin-top: 0.25rem;
-	}
-
-	.social-buttons {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.magic-link-btn {
-		width: 100%;
-		display: flex;
-		justify-content: center;
-	}
-
-	.divider {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-
-		&::before,
-		&::after {
-			content: "";
-			flex: 1;
-			height: 1px;
-			background-color: var(--border);
-		}
-
-		span {
-			font-size: 0.8125rem;
-			color: var(--text-muted);
-			white-space: nowrap;
-		}
-	}
-
-	.form {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.switch-prompt {
-		text-align: center;
-		font-size: 0.875rem;
-		color: var(--text-muted);
-
-		a {
-			color: var(--primary);
-			font-weight: 600;
-			transition: color 0.2s;
-
-			&:hover {
-				color: var(--primary-hover);
-			}
-		}
 	}
 </style>
