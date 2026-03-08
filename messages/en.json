@@ -34,7 +34,7 @@
 	"auth_continue_google": "Continue with Google",
 	"auth_magic_link": "Email me a magic link",
 	"auth_or_password": "or with password",
-	"auth_email_label": "Email address",
+	"auth_email_label": "Email",
 	"auth_email_placeholder": "you@example.com",
 	"auth_password_label": "Password",
 	"auth_password_placeholder": "Enter your password",

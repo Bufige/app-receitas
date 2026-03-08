@@ -34,7 +34,7 @@
 	"auth_continue_google": "Continuar com Google",
 	"auth_magic_link": "Enviar link mágico por e-mail",
 	"auth_or_password": "ou com senha",
-	"auth_email_label": "Endereço de e-mail",
+	"auth_email_label": "e-mail",
 	"auth_email_placeholder": "voce@exemplo.com",
 	"auth_password_label": "Senha",
 	"auth_password_placeholder": "Digite sua senha",

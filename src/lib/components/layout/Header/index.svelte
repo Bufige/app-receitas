@@ -14,6 +14,11 @@
 	const auth = useAuthStore(),
 		theme = useThemeStore();
 
+	const isAuthPage = $derived(
+		/^\/(login|register)(\/|$)/.test(page.url.pathname) ||
+			/^\/(pt-br)\/(login|register)(\/|$)/.test(page.url.pathname),
+	);
+
 	let open = $state(false);
 	let activeIndex = $state(-1);
 	let triggerRef = $state<HTMLButtonElement | null>(null);
@@ -192,7 +197,7 @@
 				<span class="thumb"></span>
 			</span>
 		</button>
-		{#if !auth.isAuthenticated}
+		{#if !auth.isAuthenticated && !isAuthPage}
 			<a class="auth-link" href={localizeHref("/login")}>{m.auth_login()}</a>
 		{/if}
 	</nav>
