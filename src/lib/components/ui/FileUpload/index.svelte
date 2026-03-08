@@ -161,6 +161,16 @@
 								class="floating-image"
 								loading="lazy"
 							/>
+						{:else if previewUrl && isVideo(item.fileType)}
+							<video
+								src={previewUrl}
+								class="floating-video"
+								muted
+								autoplay
+								loop
+								playsinline
+								preload="metadata"
+							></video>
 						{:else}
 							<div class="floating-placeholder">
 								<Icon icon={videoIcon} width="1.25em" height="1.25em" />
@@ -281,6 +291,14 @@
 		object-fit: cover;
 		border-radius: 4px;
 	}
+
+	.floating-video {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 4px;
+	}
+
 
 	.floating-placeholder {
 		width: 100%;
