@@ -33,6 +33,14 @@ async function request<T>(
 		headers.set("Authorization", `Bearer ${token}`);
 	}
 
+	const anonSession =
+		typeof window !== "undefined"
+			? localStorage.getItem("anon_session_id")
+			: null;
+	if (anonSession) {
+		headers.set("X-Anonymous-Session", anonSession);
+	}
+
 	const response = await fetch(url, {
 		...rest,
 		headers,

@@ -24,4 +24,10 @@ export const authApi = {
 	me() {
 		return api.get<RequestResponse<User>>("/auth/me");
 	},
+
+	claimSession(sessionId: string) {
+		return api.post<RequestResponse<null>>("/auth/claim-session", {
+			sessionId,
+		});
+	},
 };
