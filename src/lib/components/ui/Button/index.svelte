@@ -75,7 +75,7 @@
 
 		&:disabled {
 			cursor: not-allowed;
-			opacity: 0.6;
+			filter: grayscale(0.5) brightness(0.85);
 		}
 
 		&.round {

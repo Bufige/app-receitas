@@ -17,7 +17,6 @@
 	const sexOptions: { value: PetSex; label: () => string }[] = [
 		{ value: "male", label: () => m.memorial_sex_male() },
 		{ value: "female", label: () => m.memorial_sex_female() },
-		{ value: "unknown", label: () => m.memorial_sex_unknown() },
 	];
 
 	function handleNameInput(e: Event) {
@@ -25,14 +24,14 @@
 		draft.updatePetDetails({ name: value });
 	}
 
-	function handleSpeciesChange(e: Event) {
-		const value = (e.target as HTMLSelectElement).value as PetSpecies;
-		draft.updatePetDetails({ species: value });
+	function selectSpecies(value: PetSpecies) {
+		const newValue = draft.petDetails.species === value ? "" : value;
+		draft.updatePetDetails({ species: newValue as PetSpecies });
 	}
 
-	function handleSexChange(e: Event) {
-		const value = (e.target as HTMLSelectElement).value as PetSex;
-		draft.updatePetDetails({ sex: value });
+	function selectSex(value: PetSex) {
+		const newValue = draft.petDetails.sex === value ? "" : value;
+		draft.updatePetDetails({ sex: newValue as PetSex });
 	}
 
 	function handleBirthDateInput(e: Event) {
@@ -57,34 +56,47 @@
 	/>
 
 	<div class="field">
-		<label class="label" for="pet-species">{m.memorial_species_label()}</label>
-		<select
-			id="pet-species"
-			class="select"
-			value={draft.petDetails.species}
-			onchange={handleSpeciesChange}
-			required
+		<span class="label">{m.memorial_species_label()}</span>
+		<div
+			class="pill-group"
+			role="radiogroup"
+			aria-label={m.memorial_species_label()}
 		>
-			<option value="" disabled>—</option>
 			{#each speciesOptions as opt}
-				<option value={opt.value}>{opt.label()}</option>
+				<button
+					type="button"
+					class="pill"
+					class:selected={draft.petDetails.species === opt.value}
+					role="radio"
+					aria-checked={draft.petDetails.species === opt.value}
+					onclick={() => selectSpecies(opt.value)}
+				>
+					{opt.label()}
+				</button>
 			{/each}
-		</select>
+		</div>
 	</div>
 
 	<div class="field">
-		<label class="label" for="pet-sex">{m.memorial_sex_label()}</label>
-		<select
-			id="pet-sex"
-			class="select"
-			value={draft.petDetails.sex}
-			onchange={handleSexChange}
+		<span class="label">{m.memorial_sex_label()}</span>
+		<div
+			class="pill-group"
+			role="radiogroup"
+			aria-label={m.memorial_sex_label()}
 		>
-			<option value="">—</option>
 			{#each sexOptions as opt}
-				<option value={opt.value}>{opt.label()}</option>
+				<button
+					type="button"
+					class="pill"
+					class:selected={draft.petDetails.sex === opt.value}
+					role="radio"
+					aria-checked={draft.petDetails.sex === opt.value}
+					onclick={() => selectSex(opt.value)}
+				>
+					{opt.label()}
+				</button>
 			{/each}
-		</select>
+		</div>
 	</div>
 
 	<div class="field">
@@ -133,12 +145,11 @@
 		color: var(--text);
 	}
 
-	.select,
 	.date-input {
 		width: 100%;
 		padding: 0.625rem 0.75rem;
 		font-size: 0.9375rem;
-		background-color: var(--surface);
+		background-color: color-mix(in srgb, var(--surface) 45%, transparent);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		color: var(--text);
@@ -154,10 +165,41 @@
 		}
 	}
 
-	.select {
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236e6e6e' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-		background-repeat: no-repeat;
-		background-position: right 0.75rem center;
-		padding-right: 2.25rem;
+	// ── Pill buttons (species & sex) ──
+	.pill-group {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.pill {
+		padding: 0.5rem 1rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		background-color: color-mix(in srgb, var(--surface) 45%, transparent);
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition:
+			border-color 0.2s,
+			color 0.2s,
+			background-color 0.2s;
+
+		&:hover {
+			border-color: var(--primary);
+			color: var(--text);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--primary);
+			outline-offset: 2px;
+		}
+
+		&.selected {
+			border-color: var(--primary);
+			background-color: color-mix(in srgb, var(--primary) 50%, transparent);
+			// color: var(--primary);
+		}
 	}
 </style>

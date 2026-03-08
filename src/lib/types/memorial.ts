@@ -1,5 +1,5 @@
 export type PetSpecies = "dog" | "cat" | "bird" | "rabbit" | "other";
-export type PetSex = "male" | "female" | "unknown";
+export type PetSex = "male" | "female";
 
 export type PetDetails = {
 	name: string;

@@ -30,7 +30,6 @@
 	const sexLabels: Record<string, () => string> = {
 		male: () => m.memorial_sex_male(),
 		female: () => m.memorial_sex_female(),
-		unknown: () => m.memorial_sex_unknown(),
 	};
 
 	function getPreviewUrl(id: string): string | null {

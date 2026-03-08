@@ -110,7 +110,7 @@
 		width: 100%;
 		padding: 0.625rem 0.75rem;
 		font-size: 0.9375rem;
-		background-color: var(--surface);
+		background-color: color-mix(in srgb, var(--surface) 45%, transparent);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		color: var(--text);
