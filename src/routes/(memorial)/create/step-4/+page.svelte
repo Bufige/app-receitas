@@ -1,23 +1,12 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
-	import Button from "@components/ui/Button/index.svelte";
 	import Icon from "@iconify/svelte";
 	import imageIcon from "@iconify-icons/mdi/image-outline";
 	import videoIcon from "@iconify-icons/mdi/video-outline";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
-	import { useAnonymousSession } from "$lib/stores/anonymous-session.svelte";
-	import { useAuthStore } from "$lib/stores/auth.svelte";
 	import { useMemorialDraft } from "$lib/stores/memorial-draft.svelte";
-	import { memorialApi } from "$lib/api/memorial";
 
 	const draft = useMemorialDraft();
-	const auth = useAuthStore();
-	const anonSession = useAnonymousSession();
-
-	let uploading = $state(false);
-	let uploadProgress = $state({ current: 0, total: 0 });
-	let error = $state("");
 
 	const speciesLabels: Record<string, () => string> = {
 		dog: () => m.memorial_species_dog(),
@@ -40,59 +29,6 @@
 
 	function isVideo(fileType: string): boolean {
 		return fileType.startsWith("video/");
-	}
-
-	async function handleSubmit() {
-		error = "";
-		uploading = true;
-
-		try {
-			// 1. Upload all media files in sequence
-			const mediaRefs: { id: string; url: string; thumbnailUrl: string }[] = [];
-			const filesToUpload = draft.media
-				.map((item) => ({ item, file: draft.getFile(item.id) }))
-				.filter(
-					(entry): entry is { item: typeof entry.item; file: File } =>
-						entry.file !== undefined,
-				);
-
-			uploadProgress = { current: 0, total: filesToUpload.length };
-
-			for (const { file } of filesToUpload) {
-				const result = await memorialApi.uploadMedia(file);
-				mediaRefs.push(result.data);
-				uploadProgress = {
-					current: uploadProgress.current + 1,
-					total: uploadProgress.total,
-				};
-			}
-
-			// 2. Create the memorial
-			const result = await memorialApi.create({
-				petDetails: draft.petDetails,
-				media: draft.media,
-				tribute: draft.tribute,
-			});
-
-			// 3. Clean up draft
-			draft.reset();
-
-			// 4. Redirect based on auth state
-			const memorialId = result.data.id;
-			if (auth.isAuthenticated) {
-				goto(localizeHref(`/memorial/${memorialId}`));
-			} else {
-				goto(
-					localizeHref(
-						`/register?returnTo=${encodeURIComponent(`/memorial/${memorialId}`)}`,
-					),
-				);
-			}
-		} catch (err) {
-			error = err instanceof Error ? err.message : "Something went wrong";
-		} finally {
-			uploading = false;
-		}
 	}
 </script>
 
@@ -193,38 +129,6 @@
 			<p class="empty-text">{m.memorial_preview_no_tribute()}</p>
 		{/if}
 	</section>
-
-	<!-- Upload Progress -->
-	{#if uploading}
-		<div class="upload-status" role="status" aria-live="polite">
-			<p>
-				{m.memorial_uploading({
-					current: String(uploadProgress.current),
-					total: String(uploadProgress.total),
-				})}
-			</p>
-		</div>
-	{/if}
-
-	<!-- Error -->
-	{#if error}
-		<p class="error-message" role="alert">{error}</p>
-	{/if}
-
-	<!-- Submit -->
-	<div class="submit-area">
-		<Button
-			variant="primary"
-			size="large"
-			loading={uploading}
-			onclick={handleSubmit}
-			disabled={!draft.isStep1Valid}
-		>
-			{auth.isAuthenticated
-				? m.memorial_submit_authenticated()
-				: m.memorial_submit_anonymous()}
-		</Button>
-	</div>
 </div>
 
 <style lang="scss">
@@ -344,26 +248,5 @@
 		font-size: 0.875rem;
 		line-height: 1.6;
 		white-space: pre-wrap;
-	}
-
-	.upload-status {
-		text-align: center;
-		font-size: 0.875rem;
-		color: var(--text-muted);
-		padding: 0.75rem;
-		background-color: color-mix(in srgb, var(--primary) 8%, var(--surface));
-		border-radius: 6px;
-	}
-
-	.error-message {
-		font-size: 0.875rem;
-		color: var(--error);
-		text-align: center;
-	}
-
-	.submit-area {
-		display: flex;
-		justify-content: center;
-		padding-top: 0.5rem;
 	}
 </style>

@@ -299,7 +299,6 @@
 		border-radius: 4px;
 	}
 
-
 	.floating-placeholder {
 		width: 100%;
 		height: 100%;

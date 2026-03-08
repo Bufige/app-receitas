@@ -1,15 +1,22 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
+	import { memorialApi } from "$lib/api/memorial";
 	import Stepper from "$lib/components/ui/Stepper/index.svelte";
 	import Button from "@components/ui/Button/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import { useAnonymousSession } from "$lib/stores/anonymous-session.svelte";
+	import { useAuthStore } from "$lib/stores/auth.svelte";
 	import { useMemorialDraft } from "$lib/stores/memorial-draft.svelte";
 
 	let { children } = $props();
 
 	const draft = useMemorialDraft();
+	const auth = useAuthStore();
+	const anonSession = useAnonymousSession();
+
+	let submitting = $state(false);
 
 	const steps = $derived([
 		{ label: m.memorial_step_details() },
@@ -54,6 +61,46 @@
 		}
 	}
 
+	async function handleSubmit() {
+		submitting = true;
+
+		try {
+			const filesToUpload = draft.media
+				.map((item) => ({ item, file: draft.getFile(item.id) }))
+				.filter(
+					(entry): entry is { item: typeof entry.item; file: File } =>
+						entry.file !== undefined,
+				);
+
+			for (const { file } of filesToUpload) {
+				await memorialApi.uploadMedia(file);
+			}
+
+			const result = await memorialApi.create({
+				petDetails: draft.petDetails,
+				media: draft.media,
+				tribute: draft.tribute,
+			});
+
+			draft.reset();
+
+			const memorialId = result.data.id;
+			if (auth.isAuthenticated) {
+				goto(localizeHref(`/memorial/${memorialId}`));
+			} else {
+				goto(
+					localizeHref(
+						`/register?returnTo=${encodeURIComponent(`/memorial/${memorialId}`)}`,
+					),
+				);
+			}
+		} catch (err) {
+			// Error handling stays on step-4 page
+		} finally {
+			submitting = false;
+		}
+	}
+
 	const canGoNext = $derived(
 		(() => {
 			if (currentStep === 1) return draft.isStep1Valid;
@@ -90,6 +137,13 @@
 		<nav class="wizard-nav" aria-label="Wizard navigation">
 			<Button variant="default" onclick={goBack}>
 				{m.memorial_previous()}
+			</Button>
+			<Button
+				variant="primary"
+				onclick={handleSubmit}
+				disabled={!draft.isStep1Valid || submitting}
+			>
+				{m.memorial_submit_authenticated()}
 			</Button>
 		</nav>
 	{/if}
