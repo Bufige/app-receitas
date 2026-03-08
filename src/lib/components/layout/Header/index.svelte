@@ -15,8 +15,10 @@
 		theme = useThemeStore();
 
 	const isAuthPage = $derived(
-		/^\/(login|register)(\/|$)/.test(page.url.pathname) ||
-			/^\/(pt-br)\/(login|register)(\/|$)/.test(page.url.pathname),
+		/^\/(login|register|forgot-password)(\/|$)/.test(page.url.pathname) ||
+			/^\/(pt-br)\/(login|register|forgot-password)(\/|$)/.test(
+				page.url.pathname,
+			),
 	);
 
 	let open = $state(false);

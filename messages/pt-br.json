@@ -48,5 +48,10 @@
 	"auth_has_account": "Já tem uma conta?",
 	"auth_has_account_link": "Entrar",
 	"auth_name_label": "Nome completo",
-	"auth_name_placeholder": "Seu nome completo"
+	"auth_name_placeholder": "Seu nome completo",
+	"auth_forgot_title": "Esqueceu a senha?",
+	"auth_forgot_subtitle": "Digite seu e-mail e enviaremos um link para redefinir sua senha.",
+	"auth_forgot_submit": "Enviar link de redefinição",
+	"auth_forgot_remembered": "Lembrou da senha?",
+	"auth_forgot_back_to_login": "Voltar ao login"
 }

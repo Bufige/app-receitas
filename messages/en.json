@@ -48,5 +48,10 @@
 	"auth_has_account": "Already have an account?",
 	"auth_has_account_link": "Sign in",
 	"auth_name_label": "Full name",
-	"auth_name_placeholder": "Your full name"
+	"auth_name_placeholder": "Your full name",
+	"auth_forgot_title": "Forgot password?",
+	"auth_forgot_subtitle": "Enter your email and we'll send you a link to reset your password.",
+	"auth_forgot_submit": "Send reset link",
+	"auth_forgot_remembered": "Remembered your password?",
+	"auth_forgot_back_to_login": "Back to login"
 }
