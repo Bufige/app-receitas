@@ -642,6 +642,27 @@
 				id="planner-panel-setup"
 				aria-labelledby="planner-tab-setup"
 			>
+				<div class="planner-actions">
+					<Button variant="primary" size="medium" round onclick={create_plan}>
+						{m.planner_create_plan()}
+					</Button>
+					{#if has_available_plans}
+						<Button
+							variant="danger"
+							size="medium"
+							round
+							onclick={delete_current_plan}
+						>
+							{planner_delete_plan_label()}
+						</Button>
+					{/if}
+				</div>
+				<p class="field-note planner-actions__hint">
+					{has_available_plans
+						? m.planner_create_plan_hint()
+						: planner_empty_setup_hint()}
+				</p>
+
 				<div class="section-heading">
 					<p class="eyebrow">{m.planner_eyebrow()}</p>
 					<h2>{m.planner_settings_title()}</h2>
@@ -680,27 +701,6 @@
 						</div>
 					{/if}
 				</div>
-
-				<div class="setup-actions">
-					<Button variant="primary" size="medium" round onclick={create_plan}>
-						{m.planner_create_plan()}
-					</Button>
-					{#if has_available_plans}
-						<Button
-							variant="danger"
-							size="medium"
-							round
-							onclick={delete_current_plan}
-						>
-							{planner_delete_plan_label()}
-						</Button>
-					{/if}
-				</div>
-				<p class="field-note">
-					{has_available_plans
-						? m.planner_create_plan_hint()
-						: planner_empty_setup_hint()}
-				</p>
 
 				{#if has_available_plans}
 					<div class="field-group">
@@ -1137,20 +1137,20 @@
 		gap: 1rem;
 	}
 
-	.planner-tabs {
+	.planner-actions {
 		display: grid;
 		gap: 1rem;
-		min-width: 0;
-	}
-
-	.setup-actions {
-		display: grid;
-		gap: 0.75rem;
 
 		@include md {
 			display: flex;
 			flex-wrap: wrap;
 		}
+	}
+
+	.planner-tabs {
+		display: grid;
+		gap: 1rem;
+		min-width: 0;
 	}
 
 	.planner-tabs {
