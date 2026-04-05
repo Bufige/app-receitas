@@ -9,6 +9,16 @@ import type {
 
 const MAX_EXPANDED_OCCURRENCES = 500;
 
+export type PlanWindowValidationResult =
+	| { ok: true }
+	| {
+			ok: false;
+			reason:
+				| "date-outside-range"
+				| "recurrence-outside-range"
+				| "recurrence-open-ended";
+	  };
+
 function clone_date(date: Date): Date {
 	return new Date(date.getTime());
 }
@@ -67,6 +77,16 @@ function add_interval(date: Date, recurrence_rule: RecurrenceRule): Date {
 	}
 
 	return next_date;
+}
+
+function is_within_range(
+	date: Date,
+	range_start?: Date,
+	range_end?: Date,
+): boolean {
+	return (
+		(!range_start || date >= range_start) && (!range_end || date <= range_end)
+	);
 }
 
 export function get_preset_range(
@@ -131,6 +151,60 @@ export function format_plan_selection_label(plan: {
 	end_date?: MealPlan["end_date"];
 }): string {
 	return `${plan.name} · ${format_plan_range_label(plan)} · ${plan.id}`;
+}
+
+export function validate_meal_plan_entry_window(
+	entry: Pick<MealPlanEntry, "date" | "recurrence_rule">,
+	plan: Pick<MealPlan, "start_date" | "end_date">,
+): PlanWindowValidationResult {
+	const range_start = plan.start_date
+		? parse_iso_date(plan.start_date)
+		: undefined;
+	const range_end = plan.end_date ? parse_iso_date(plan.end_date) : undefined;
+	const initial_date = parse_iso_date(entry.date);
+
+	if (!is_within_range(initial_date, range_start, range_end)) {
+		return { ok: false, reason: "date-outside-range" };
+	}
+
+	if (!entry.recurrence_rule) {
+		return { ok: true };
+	}
+
+	if (
+		!entry.recurrence_rule.ends_on &&
+		!entry.recurrence_rule.occurrence_count
+	) {
+		return { ok: false, reason: "recurrence-open-ended" };
+	}
+
+	let current_date = initial_date;
+	let occurrence_index = 0;
+	const recurrence_end = entry.recurrence_rule.ends_on
+		? parse_iso_date(entry.recurrence_rule.ends_on)
+		: undefined;
+
+	while (occurrence_index < MAX_EXPANDED_OCCURRENCES) {
+		const is_after_recurrence_end = recurrence_end
+			? current_date > recurrence_end
+			: false;
+		const reached_count_limit = entry.recurrence_rule.occurrence_count
+			? occurrence_index >= entry.recurrence_rule.occurrence_count
+			: false;
+
+		if (is_after_recurrence_end || reached_count_limit) {
+			break;
+		}
+
+		if (!is_within_range(current_date, range_start, range_end)) {
+			return { ok: false, reason: "recurrence-outside-range" };
+		}
+
+		current_date = add_interval(current_date, entry.recurrence_rule);
+		occurrence_index += 1;
+	}
+
+	return { ok: true };
 }
 
 export function expand_meal_plan_entries(

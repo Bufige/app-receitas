@@ -12,6 +12,7 @@ import type {
 import {
 	detect_meal_plan_conflicts,
 	get_preset_range,
+	validate_meal_plan_entry_window,
 } from "$lib/utils/planning";
 import { calculate_shopping_list } from "$lib/utils/shopping-list";
 
@@ -169,6 +170,36 @@ function persist_statuses() {
 	save_statuses(shopping_item_statuses);
 }
 
+function filter_entries_for_plan_window(plan: MealPlan): MealPlanEntry[] {
+	return plan.entries.filter(
+		(entry) => validate_meal_plan_entry_window(entry, plan).ok,
+	);
+}
+
+function update_active_plan_range(
+	updates: Pick<MealPlan, "planning_preset" | "start_date" | "end_date">,
+) {
+	const current_plan = get_active_plan(meal_plans, active_plan_id);
+	const next_plan: MealPlan = {
+		...current_plan,
+		...updates,
+	};
+	const filtered_entries = filter_entries_for_plan_window(next_plan);
+	const removed_entries = current_plan.entries.length - filtered_entries.length;
+
+	meal_plans = meal_plans.map((plan) =>
+		plan.id === current_plan.id
+			? {
+					...next_plan,
+					entries: filtered_entries,
+				}
+			: plan,
+	);
+	persist_plans();
+
+	return { removedEntries: removed_entries };
+}
+
 function update_plan(updates: Partial<MealPlan>) {
 	const current_plan = get_active_plan(meal_plans, active_plan_id);
 	meal_plans = meal_plans.map((plan) =>
@@ -277,14 +308,14 @@ export function useMealPlanStore() {
 		},
 		setPlanningPreset(preset: PlanningPreset) {
 			const range = get_preset_range(preset);
-			update_plan({
+			return update_active_plan_range({
 				planning_preset: preset,
 				start_date: range.start_date,
 				end_date: range.end_date,
 			});
 		},
 		setCustomRange(start_date: string, end_date: string) {
-			update_plan({
+			return update_active_plan_range({
 				planning_preset: "custom_range",
 				start_date,
 				end_date,
@@ -310,15 +341,43 @@ export function useMealPlanStore() {
 				recurrence_rule: entry.recurrence_rule,
 				series_id: entry.recurrence_rule ? build_series_id() : undefined,
 			};
+			const validation = validate_meal_plan_entry_window(
+				next_entry,
+				current_plan,
+			);
+
+			if (!validation.ok) {
+				return validation;
+			}
+
 			meal_plans = meal_plans.map((plan) =>
 				plan.id === current_plan.id
 					? { ...plan, entries: [...plan.entries, next_entry] }
 					: plan,
 			);
 			persist_plans();
+			return { ok: true };
 		},
 		updateEntry(entry_id: string, updates: Partial<MealPlanEntry>) {
 			const current_plan = get_active_plan(meal_plans, active_plan_id);
+			const current_entry = current_plan.entries.find(
+				(entry) => entry.id === entry_id,
+			);
+
+			if (!current_entry) {
+				return { ok: true };
+			}
+
+			const next_entry = { ...current_entry, ...updates };
+			const validation = validate_meal_plan_entry_window(
+				next_entry,
+				current_plan,
+			);
+
+			if (!validation.ok) {
+				return validation;
+			}
+
 			meal_plans = meal_plans.map((plan) =>
 				plan.id === current_plan.id
 					? {
@@ -330,9 +389,30 @@ export function useMealPlanStore() {
 					: plan,
 			);
 			persist_plans();
+			return { ok: true };
 		},
 		updateSeries(series_id: string, updates: Partial<MealPlanEntry>) {
 			const current_plan = get_active_plan(meal_plans, active_plan_id);
+			const series_entries = current_plan.entries.filter(
+				(entry) => entry.series_id === series_id,
+			);
+
+			const invalid_entry = series_entries.find((entry) => {
+				const validation = validate_meal_plan_entry_window(
+					{ ...entry, ...updates },
+					current_plan,
+				);
+
+				return !validation.ok;
+			});
+
+			if (invalid_entry) {
+				return validate_meal_plan_entry_window(
+					{ ...invalid_entry, ...updates },
+					current_plan,
+				);
+			}
+
 			meal_plans = meal_plans.map((plan) =>
 				plan.id === current_plan.id
 					? {
@@ -346,6 +426,7 @@ export function useMealPlanStore() {
 					: plan,
 			);
 			persist_plans();
+			return { ok: true };
 		},
 		removeEntry(entry_id: string) {
 			const current_plan = get_active_plan(meal_plans, active_plan_id);

@@ -66,6 +66,8 @@
 
 - Internationalization uses `@inlang/paraglide-js` v2 — do not introduce other i18n libraries.
 - Message files live in `messages/` (one JSON per locale: `en.json`, `pt-br.json`). The generated code lives in `$lib/paraglide/` (gitignored, never edit).
+- Ignore the generated `src/lib/paraglide/` folder during normal feature work and fixes. Treat it as build output, not source-of-truth application code.
+- If i18n text needs to change, update only the source message files in `messages/` and regenerate the output when appropriate instead of hand-editing generated Paraglide files.
 - No locale-prefixed route folders — `hooks.ts` reroutes `/pt-br/*` transparently via `deLocalizeUrl`.
 - Never hardcode user-facing strings. Import message functions: `import * as m from '$lib/paraglide/messages.js'` and use `m.key_name()`.
 - Use key prefixes to namespace messages: `auth_login_title`, `dashboard_welcome`, `common_save`.

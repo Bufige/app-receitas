@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { page } from "$app/state";
 	import Icon from "@iconify/svelte";
-	import calendarRangeOutline from "@iconify-icons/mdi/calendar-range-outline";
-	import layersTripleOutline from "@iconify-icons/mdi/layers-triple-outline";
-	import repeatVariant from "@iconify-icons/mdi/repeat-variant";
+	import calendarMonthOutline from "@iconify-icons/mdi/calendar-month-outline";
+	import cogOutline from "@iconify-icons/mdi/cog-outline";
+	import formatListBulleted from "@iconify-icons/mdi/format-list-bulleted";
+	import silverwareForkKnife from "@iconify-icons/mdi/silverware-fork-knife";
 	import Button from "$lib/components/ui/Button/index.svelte";
-	import PageHero from "$lib/components/ui/PageHero/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
+	import { announce } from "$lib/utils/announce";
 	import type {
 		ExpandedMealPlanEntry,
 		MealPlanEntry,
@@ -19,11 +20,14 @@
 	} from "$lib/types/planning";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import type { PlanWindowValidationResult } from "$lib/utils/planning";
 	import {
 		expand_meal_plan_entries,
 		format_plan_range_label,
 		format_plan_selection_label,
 	} from "$lib/utils/planning";
+
+	type PlannerTab = "setup" | "meal" | "preview" | "entries";
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
@@ -46,6 +50,31 @@
 	let editing_entry_id = $state<string | null>(null);
 	let editing_series_id = $state<string | null>(null);
 	let last_active_plan_id = $state(meal_plan_store.activePlanId);
+	let active_tab = $state<PlannerTab>("setup");
+	let planner_feedback = $state<string | null>(null);
+
+	const planner_tabs = [
+		{
+			id: "setup" as const,
+			label: () => m.planner_settings_title(),
+			icon: cogOutline,
+		},
+		{
+			id: "meal" as const,
+			label: () => m.planner_form_title(),
+			icon: silverwareForkKnife,
+		},
+		{
+			id: "preview" as const,
+			label: () => m.planner_schedule_preview_title(),
+			icon: calendarMonthOutline,
+		},
+		{
+			id: "entries" as const,
+			label: () => m.planner_entries_title(),
+			icon: formatListBulleted,
+		},
+	];
 
 	const available_plans = $derived(meal_plan_store.mealPlans);
 	const entries = $derived(meal_plan_store.mealPlan.entries);
@@ -65,7 +94,7 @@
 	);
 	const active_plan_summary = $derived.by(
 		() =>
-			`${plan_range_label} · ${entries.length} ${m.planner_overview_occurrences().toLowerCase()}`,
+			`${plan_range_label} · ${expanded_entries.length} ${m.planner_overview_occurrences().toLowerCase()}`,
 	);
 	const preview_days = $derived.by(() => {
 		const grouped = new Map<
@@ -94,6 +123,7 @@
 		const recipe_from_query = page.url.searchParams.get("recipe");
 		if (recipe_from_query) {
 			selected_recipe_id = recipe_from_query;
+			active_tab = "meal";
 		}
 	});
 
@@ -105,8 +135,35 @@
 		}
 
 		last_active_plan_id = next_active_plan_id;
+		active_tab = "setup";
+		planner_feedback = null;
 		reset_form();
 	});
+
+	function show_planner_feedback(message: string) {
+		planner_feedback = message;
+		announce(message);
+	}
+
+	function clear_planner_feedback() {
+		planner_feedback = null;
+	}
+
+	function get_range_error_message(
+		reason:
+			| "date-outside-range"
+			| "recurrence-outside-range"
+			| "recurrence-open-ended",
+	): string {
+		switch (reason) {
+			case "date-outside-range":
+				return m.planner_entry_outside_range_error();
+			case "recurrence-open-ended":
+				return m.planner_recurrence_needs_limit_error();
+			case "recurrence-outside-range":
+				return m.planner_recurrence_outside_range_error();
+		}
+	}
 
 	function build_recurrence_rule(): RecurrenceRule | undefined {
 		if (!recurrence_enabled) {
@@ -155,24 +212,43 @@
 			recurrence_rule: build_recurrence_rule(),
 		};
 
-		if (editing_series_id) {
-			meal_plan_store.updateSeries(editing_series_id, payload);
-		} else if (editing_entry_id) {
-			meal_plan_store.updateEntry(editing_entry_id, payload);
-		} else {
-			meal_plan_store.addEntry({
-				recipe_id: selected_recipe_id,
-				date: selected_date,
-				meal_type: selected_meal_type,
-				servings: payload.servings,
-				recurrence_rule: payload.recurrence_rule,
-			});
+		const result: PlanWindowValidationResult = editing_series_id
+			? meal_plan_store.updateSeries(editing_series_id, payload)
+			: editing_entry_id
+				? meal_plan_store.updateEntry(editing_entry_id, payload)
+				: meal_plan_store.addEntry({
+						recipe_id: selected_recipe_id,
+						date: selected_date,
+						meal_type: selected_meal_type,
+						servings: payload.servings,
+						recurrence_rule: payload.recurrence_rule,
+					});
+
+		if (!result.ok) {
+			show_planner_feedback(get_range_error_message(result.reason));
+			return;
 		}
 
+		clear_planner_feedback();
+
+		active_tab = "entries";
 		reset_form();
 	}
 
+	function handle_custom_range_change(start_date: string, end_date: string) {
+		const result = meal_plan_store.setCustomRange(start_date, end_date);
+
+		if (result.removedEntries > 0) {
+			show_planner_feedback(
+				m.planner_range_pruned({ count: `${result.removedEntries}` }),
+			);
+		} else {
+			clear_planner_feedback();
+		}
+	}
+
 	function begin_single_edit(entry: MealPlanEntry) {
+		active_tab = "meal";
 		editing_entry_id = entry.id;
 		editing_series_id = null;
 		selected_recipe_id = entry.recipe_id;
@@ -258,7 +334,15 @@
 	}
 
 	function set_preset(preset: PlanningPreset) {
-		meal_plan_store.setPlanningPreset(preset);
+		const result = meal_plan_store.setPlanningPreset(preset);
+
+		if (result.removedEntries > 0) {
+			show_planner_feedback(
+				m.planner_range_pruned({ count: `${result.removedEntries}` }),
+			);
+		} else {
+			clear_planner_feedback();
+		}
 	}
 
 	function select_plan(event: Event) {
@@ -269,111 +353,103 @@
 
 	function create_plan() {
 		meal_plan_store.createPlan();
+		active_tab = "setup";
+		clear_planner_feedback();
 	}
 
 	function clear_current_plan() {
 		meal_plan_store.clearPlan();
+		active_tab = "setup";
+		clear_planner_feedback();
 		reset_form();
+	}
+
+	function open_tab(tab: PlannerTab) {
+		active_tab = tab;
 	}
 </script>
 
 <SEO title={m.seo_planner_title()} description={m.seo_planner_description()} />
 
 <section class="page">
-	<PageHero title={m.planner_title()} subtitle={m.planner_subtitle()}>
-		{#snippet actions()}
-			<div class="hero-actions">
-				<Button
-					href={localizeHref("/planned-meals")}
-					variant="primary"
-					size="medium"
-					round
+	<section class="planner-context surface-panel">
+		<div class="planner-context__copy">
+			<p class="eyebrow">{m.planner_active_plan_label()}</p>
+			<h2 title={meal_plan_store.mealPlan.name}>
+				{meal_plan_store.mealPlan.name}
+			</h2>
+			<p title={active_plan_summary}>{active_plan_summary}</p>
+			<span class="plan-id">{meal_plan_store.activePlanId}</span>
+		</div>
+		<div class="planner-context__controls">
+			<div class="field-group">
+				<label for="active-plan">{m.planner_active_plan_label()}</label>
+				<select
+					id="active-plan"
+					value={meal_plan_store.activePlanId}
+					onchange={select_plan}
 				>
-					{m.planner_open_planned_meals()}
+					{#each available_plans as plan}
+						<option value={plan.id}>{format_plan_selection_label(plan)}</option>
+					{/each}
+				</select>
+			</div>
+			<div class="planner-context__cta">
+				<Button variant="primary" size="medium" round onclick={create_plan}>
+					{m.planner_create_plan()}
 				</Button>
-				<Button
-					href={localizeHref("/shopping-list")}
-					variant="outline"
-					size="medium"
-					round
+				<p class="field-note">{m.planner_create_plan_hint()}</p>
+			</div>
+		</div>
+	</section>
+
+	{#if planner_feedback}
+		<div class="planner-feedback" role="status" aria-live="polite">
+			<p>{planner_feedback}</p>
+		</div>
+	{/if}
+
+	<section class="planner-tabs surface-panel">
+		<div
+			class="planner-tabs__nav"
+			role="tablist"
+			aria-label={m.planner_title()}
+		>
+			{#each planner_tabs as tab}
+				<button
+					type="button"
+					role="tab"
+					id={`planner-tab-${tab.id}`}
+					class:active={active_tab === tab.id}
+					aria-selected={active_tab === tab.id}
+					aria-controls={`planner-panel-${tab.id}`}
+					tabindex={active_tab === tab.id ? 0 : -1}
+					onclick={() => open_tab(tab.id)}
 				>
-					{m.nav_shopping_list()}
-				</Button>
-			</div>
-		{/snippet}
-	</PageHero>
+					<span class="tab-icon" aria-hidden="true">
+						<Icon icon={tab.icon} width="18" height="18" />
+					</span>
+					<span>{tab.label()}</span>
+					{#if tab.id === "entries"}
+						<small>{entries.length}</small>
+					{:else if tab.id === "preview"}
+						<small>{preview_days.length}</small>
+					{/if}
+				</button>
+			{/each}
+		</div>
 
-	<div class="summary-grid">
-		<article class="summary-card surface-panel">
-			<div class="summary-icon">
-				<Icon icon={calendarRangeOutline} width="20" height="20" />
-			</div>
-			<div>
-				<p>{m.planner_overview_period()}</p>
-				<strong>{plan_range_label}</strong>
-			</div>
-		</article>
-		<article class="summary-card surface-panel">
-			<div class="summary-icon">
-				<Icon icon={layersTripleOutline} width="20" height="20" />
-			</div>
-			<div>
-				<p>{m.planner_overview_occurrences()}</p>
-				<strong>{expanded_entries.length}</strong>
-			</div>
-		</article>
-		<article class="summary-card surface-panel">
-			<div class="summary-icon">
-				<Icon icon={repeatVariant} width="20" height="20" />
-			</div>
-			<div>
-				<p>{m.planner_overview_recurring()}</p>
-				<strong>{recurring_series_count}</strong>
-			</div>
-		</article>
-	</div>
-
-	<div class="planner-layout">
-		<div class="planner-sidebar">
-			<section class="panel surface-panel settings-panel">
+		{#if active_tab === "setup"}
+			<div
+				class="panel planner-panel settings-panel"
+				role="tabpanel"
+				id="planner-panel-setup"
+				aria-labelledby="planner-tab-setup"
+			>
 				<div class="section-heading">
 					<p class="eyebrow">{m.planner_eyebrow()}</p>
 					<h2>{m.planner_settings_title()}</h2>
 					<p>{m.planner_settings_subtitle()}</p>
-				</div>
-
-				<div class="setup-callout">
-					<div class="setup-callout__copy">
-						<p class="eyebrow">{m.planner_active_plan_label()}</p>
-						<strong title={meal_plan_store.mealPlan.name}
-							>{meal_plan_store.mealPlan.name}</strong
-						>
-						<span title={active_plan_summary}>{active_plan_summary}</span>
-					</div>
-					<div class="setup-callout__action">
-						<Button variant="primary" size="medium" round onclick={create_plan}>
-							{m.planner_create_plan()}
-						</Button>
-					</div>
-					<p class="field-note setup-callout__hint">
-						{m.planner_create_plan_hint()}
-					</p>
-				</div>
-
-				<div class="field-group">
-					<label for="active-plan">{m.planner_active_plan_label()}</label>
-					<select
-						id="active-plan"
-						value={meal_plan_store.activePlanId}
-						onchange={select_plan}
-					>
-						{#each available_plans as plan}
-							<option value={plan.id}
-								>{format_plan_selection_label(plan)}</option
-							>
-						{/each}
-					</select>
-					<p class="field-note">{active_plan_summary}</p>
 				</div>
 
 				<div class="field-group">
@@ -438,7 +514,7 @@
 								type="date"
 								value={meal_plan_store.mealPlan.start_date ?? ""}
 								oninput={(event) =>
-									meal_plan_store.setCustomRange(
+									handle_custom_range_change(
 										(event.currentTarget as HTMLInputElement).value,
 										meal_plan_store.mealPlan.end_date ??
 											(event.currentTarget as HTMLInputElement).value,
@@ -453,7 +529,7 @@
 								type="date"
 								value={meal_plan_store.mealPlan.end_date ?? ""}
 								oninput={(event) =>
-									meal_plan_store.setCustomRange(
+									handle_custom_range_change(
 										meal_plan_store.mealPlan.start_date ??
 											(event.currentTarget as HTMLInputElement).value,
 										(event.currentTarget as HTMLInputElement).value,
@@ -462,9 +538,14 @@
 						</div>
 					</div>
 				{/if}
-			</section>
-
-			<section class="panel surface-panel form-panel">
+			</div>
+		{:else if active_tab === "meal"}
+			<div
+				class="panel planner-panel form-panel"
+				role="tabpanel"
+				id="planner-panel-meal"
+				aria-labelledby="planner-tab-meal"
+			>
 				<div class="section-heading compact">
 					<h2>{m.planner_form_title()}</h2>
 					<p>{m.planner_form_subtitle()}</p>
@@ -487,9 +568,19 @@
 
 					<div class="field-group">
 						<label for="entry-date">{m.planner_date_label()}</label>
-						<input id="entry-date" type="date" bind:value={selected_date} />
+						<input
+							id="entry-date"
+							type="date"
+							min={meal_plan_store.mealPlan.start_date}
+							max={meal_plan_store.mealPlan.end_date}
+							bind:value={selected_date}
+						/>
 					</div>
 				</div>
+
+				<p class="field-note">
+					{m.planner_range_rule_hint({ range: plan_range_label })}
+				</p>
 
 				<div class="split-grid">
 					<div class="field-group">
@@ -551,6 +642,13 @@
 						<div class="field-group">
 							<label for="ends-on">{m.planner_ends_on_label()}</label>
 							<input id="ends-on" type="date" bind:value={recurrence_ends_on} />
+							<input
+								id="ends-on"
+								type="date"
+								min={selected_date || meal_plan_store.mealPlan.start_date}
+								max={meal_plan_store.mealPlan.end_date}
+								bind:value={recurrence_ends_on}
+							/>
 						</div>
 
 						<div class="field-group">
@@ -574,35 +672,50 @@
 				{/if}
 
 				<div class="action-row">
-					<Button variant="primary" size="medium" round onclick={handle_submit}
-						>{editing_series_id
+					<Button variant="primary" size="medium" round onclick={handle_submit}>
+						{editing_series_id
 							? m.planner_update_series()
 							: editing_entry_id
 								? m.planner_update_entry()
-								: m.planner_add_entry()}</Button
-					>
-					<Button variant="outline" size="medium" round onclick={reset_form}
-						>{m.planner_reset_form()}</Button
-					>
+								: m.planner_add_entry()}
+					</Button>
+					<Button variant="outline" size="medium" round onclick={reset_form}>
+						{m.planner_reset_form()}
+					</Button>
 					<Button
 						variant="danger"
 						size="medium"
 						round
-						onclick={clear_current_plan}>{m.planner_clear_plan()}</Button
+						onclick={clear_current_plan}
 					>
+						{m.planner_clear_plan()}
+					</Button>
 				</div>
-			</section>
-		</div>
-
-		<div class="planner-main">
-			<section class="panel surface-panel preview-panel">
+			</div>
+		{:else if active_tab === "preview"}
+			<div
+				class="panel planner-panel preview-panel"
+				role="tabpanel"
+				id="planner-panel-preview"
+				aria-labelledby="planner-tab-preview"
+			>
 				<div class="section-heading compact">
 					<h2>{m.planner_schedule_preview_title()}</h2>
 					<p>{m.planner_schedule_preview_subtitle()}</p>
 				</div>
 
 				{#if preview_days.length === 0}
-					<p class="empty">{m.planner_preview_empty()}</p>
+					<div class="empty-panel">
+						<p class="empty">{m.planner_preview_empty()}</p>
+						<Button
+							variant="primary"
+							size="medium"
+							round
+							onclick={() => open_tab("meal")}
+						>
+							{m.planner_add_entry()}
+						</Button>
+					</div>
 				{:else}
 					<div class="preview-grid">
 						{#each preview_days as day}
@@ -642,10 +755,25 @@
 						{/each}
 					</div>
 				{/if}
-			</section>
-
-			<section class="panel surface-panel entries-panel">
-				<h2>{m.planner_entries_title()}</h2>
+			</div>
+		{:else}
+			<div
+				class="panel planner-panel entries-panel"
+				role="tabpanel"
+				id="planner-panel-entries"
+				aria-labelledby="planner-tab-entries"
+			>
+				<div class="entries-heading">
+					<h2>{m.planner_entries_title()}</h2>
+					<Button
+						variant="outline"
+						size="medium"
+						round
+						onclick={() => open_tab("meal")}
+					>
+						{m.planner_add_entry()}
+					</Button>
+				</div>
 
 				{#if conflicts.length > 0}
 					<div class="conflicts">
@@ -664,7 +792,17 @@
 				{/if}
 
 				{#if entries.length === 0}
-					<p class="empty">{m.planner_no_entries()}</p>
+					<div class="empty-panel">
+						<p class="empty">{m.planner_no_entries()}</p>
+						<Button
+							variant="primary"
+							size="medium"
+							round
+							onclick={() => open_tab("meal")}
+						>
+							{m.planner_add_entry()}
+						</Button>
+					</div>
 				{:else}
 					<div class="entry-list">
 						{#each entries as entry}
@@ -702,9 +840,9 @@
 						{/each}
 					</div>
 				{/if}
-			</section>
-		</div>
-	</div>
+			</div>
+		{/if}
+	</section>
 </section>
 
 <style lang="scss">
@@ -716,72 +854,135 @@
 		gap: 1rem;
 	}
 
-	.hero-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-		width: 100%;
-
-		@include md {
-			justify-content: flex-end;
-		}
-	}
-
-	.summary-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 0.85rem;
-
-		@include md {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
-	}
-
-	.summary-card {
-		display: flex;
-		align-items: center;
-		gap: 0.9rem;
-		padding: 1rem;
-
-		p {
-			font-size: 0.85rem;
-			color: var(--text-muted);
-		}
-
-		strong {
-			display: block;
-			margin-top: 0.15rem;
-			font-size: 1rem;
-		}
-	}
-
-	.summary-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.75rem;
-		height: 2.75rem;
-		border-radius: 16px;
-		background: color-mix(in srgb, var(--primary) 10%, var(--surface));
-		color: var(--primary);
-		flex-shrink: 0;
-	}
-
-	.planner-layout {
+	.planner-context {
 		display: grid;
 		gap: 1rem;
+		padding: 1rem;
+		border-radius: 24px;
+
+		@include md {
+			padding: 1.15rem;
+		}
 
 		@include lg {
-			grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.1fr);
-			align-items: start;
+			grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
+			align-items: end;
 		}
 	}
 
-	.planner-sidebar,
-	.planner-main {
+	.planner-context__copy,
+	.planner-context__controls,
+	.planner-tabs {
 		display: grid;
 		gap: 1rem;
 		min-width: 0;
+	}
+
+	.planner-context__copy {
+		h2 {
+			font-size: 1.4rem;
+			line-height: 1.05;
+		}
+
+		p {
+			color: var(--text-muted);
+		}
+	}
+
+	.plan-id {
+		display: inline-flex;
+		width: fit-content;
+		max-width: 100%;
+		padding: 0.35rem 0.65rem;
+		border-radius: 999px;
+		border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+		background: color-mix(in srgb, var(--surface-muted) 82%, var(--surface));
+		font-size: 0.78rem;
+		font-weight: 700;
+		color: var(--primary);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.planner-context__cta {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.planner-tabs {
+		padding: 0.75rem;
+		border-radius: 24px;
+		gap: 0.75rem;
+
+		@include md {
+			padding: 1rem;
+		}
+	}
+
+	.planner-tabs__nav {
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: thin;
+		gap: 0.75rem;
+		padding: 0.5rem;
+		border-radius: 20px;
+		border: 1px solid var(--border);
+		background: color-mix(in srgb, var(--surface) 94%, transparent);
+		box-shadow: var(--soft-box-shadow);
+
+		button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			flex: 0 0 auto;
+			gap: 0.45rem;
+			min-width: max-content;
+			padding: 0.7rem 1rem;
+			border: none;
+			border-radius: 14px;
+			background: transparent;
+			color: var(--text-muted);
+			font-size: 0.9rem;
+			font-weight: 700;
+			white-space: nowrap;
+			cursor: pointer;
+			transition:
+				background-color var(--motion-base, 180ms) var(--ease-standard, ease),
+				color var(--motion-base, 180ms) var(--ease-standard, ease),
+				transform var(--motion-base, 180ms) var(--ease-standard, ease);
+
+			&:hover,
+			&:focus-visible,
+			&.active {
+				background: color-mix(in srgb, var(--primary) 14%, transparent);
+				color: var(--primary);
+			}
+
+			.tab-icon {
+				flex-shrink: 0;
+			}
+
+			small {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				min-width: 1.5rem;
+				height: 1.5rem;
+				padding: 0 0.4rem;
+				border-radius: 999px;
+				background: color-mix(
+					in srgb,
+					var(--surface-muted) 85%,
+					var(--surface)
+				);
+				color: inherit;
+				font-size: 0.75rem;
+			}
+		}
 	}
 
 	.panel {
@@ -792,6 +993,11 @@
 		@include md {
 			padding: 1.15rem;
 		}
+	}
+
+	.planner-panel {
+		background: color-mix(in srgb, var(--surface) 96%, transparent);
+		border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
 	}
 
 	.section-heading {
@@ -825,57 +1031,10 @@
 	.settings-panel,
 	.form-panel,
 	.preview-panel,
-	.entries-panel {
+	.entries-panel,
+	.empty-panel {
 		display: grid;
 		gap: 1rem;
-	}
-
-	.setup-callout {
-		display: grid;
-		gap: 0.85rem;
-		padding: 1rem;
-		border-radius: 22px;
-		border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
-		background: linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--primary) 10%, var(--surface)) 0%,
-			color-mix(in srgb, var(--surface-muted) 88%, var(--surface)) 100%
-		);
-		box-shadow: var(--shadow-soft);
-	}
-
-	.setup-callout__copy {
-		display: grid;
-		gap: 0.25rem;
-		min-width: 0;
-
-		strong,
-		span {
-			display: block;
-			min-width: 0;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-		}
-
-		strong {
-			font-size: 1.05rem;
-			line-height: 1.1;
-		}
-
-		span {
-			color: var(--text-muted);
-			font-size: 0.9rem;
-		}
-	}
-
-	.setup-callout__action {
-		width: 100%;
-		max-width: 100%;
-	}
-
-	.setup-callout__hint {
-		margin: 0;
 	}
 
 	.split-grid {
@@ -949,6 +1108,10 @@
 			flex-direction: row;
 			flex-wrap: wrap;
 		}
+	}
+
+	.empty-panel {
+		justify-items: start;
 	}
 
 	.preview-grid {
@@ -1028,6 +1191,14 @@
 
 	.entry-list {
 		display: grid;
+		gap: 0.75rem;
+	}
+
+	.entries-heading {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
 		gap: 0.75rem;
 	}
 
