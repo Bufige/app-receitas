@@ -8,6 +8,10 @@ The main business goal is to let users build a meal plan, then automatically cal
 
 The current frontend already supports keeping multiple saved meal plans and switching the active plan across the planner, planned meals view, and shopping list. This makes it possible to compare different planning horizons such as `this_week`, `next_week`, `this_month`, and `custom_range` without losing previously configured plans.
 
+The planner experience now also supports creating empty plans, configuring them in a tabbed workflow, and reviewing the active range in a calendar overview tab that maps all planned meals across the selected interval.
+
+The profile history view has also evolved beyond a static summary. Users can now review all saved plans together, filter history by a specific plan, or constrain the analysis to a custom date interval.
+
 Since this is a frontend-only project for now, the immediate priority is to define the data structures the UI expects and to work with mocked data until the backend contract is implemented.
 
 Recipes themselves are managed by an administrator. Regular users do not create recipes directly; they browse the available recipe catalog, build meal plans, and generate shopping lists from those administrator-provided recipes.
@@ -21,9 +25,12 @@ Recipes themselves are managed by an administrator. Regular users do not create 
 - Support planning for different durations, such as a full week or full month.
 - Offer planning horizon presets such as `this_week`, `next_week`, `this_month`, and `custom_range`.
 - Allow users to keep multiple saved meal plans and switch the active plan by range, name, or plan id.
+- Allow users to create a brand-new empty plan without overwriting seeded or previously saved plans.
 - Allow users to schedule recurring recipes across days, weeks, months, or years from a calendar view.
+- Keep the active plan strict, so planned meals and recurring series remain inside the selected plan window.
 - Let users define a default household serving size and override servings per planned meal.
 - Aggregate ingredient quantities across selected recipes.
+- Let users review planning history by plan, date interval, or the full saved history.
 - Present a final shopping list that is easy to understand and review.
 
 ---
@@ -65,18 +72,23 @@ Users should be able to:
 
 - choose a planning period (weekly or monthly);
 - choose a planning preset such as `this_week`, `next_week`, `this_month`, or a custom date range;
+- create an empty plan and name it before assigning any meals;
 - switch between previously created plans without overwriting the currently selected planner context;
 - assign recipes to specific days and meals;
 - repeat the same recipe on multiple days if desired;
 - select a date in a calendar and define a recurrence for the next days, weeks, months, or years;
 - edit only one recurring occurrence or the entire recurring series;
-- change servings per recipe selection when needed.
+- change servings per recipe selection when needed;
+- review the active interval in a calendar overview before leaving the planner;
+- keep all saved entries inside the active plan window when changing presets or custom dates.
 
 The planner should also help prevent confusing schedules by warning users when a meal slot is already occupied or when the same time period becomes overloaded.
 
 This is important because the ingredient calculation should depend not only on the recipe itself, but also on how many times it appears in the plan, whether it is recurring, and how many servings are needed.
 
 Recurring planning should be considered a core feature, not an optional enhancement. A user should be able to pick a recipe, choose a calendar date, and say that they will eat it repeatedly for a defined interval and duration.
+
+The current planner model is intentionally strict: if a one-time meal or a recurring series falls outside the active plan range, it should be rejected or pruned so the planner, planned meals view, shopping list, and calendar overview all describe the same interval.
 
 ### 4. Generate a Shopping List
 
@@ -124,6 +136,7 @@ The initial contract should also leave room for:
 
 - household-level preferences that influence servings and planning defaults;
 - editing recurring series without breaking the calendar model;
+- history-level filtering by saved plan or date interval;
 - tracking shopping list item status across a planning period.
 
 ---
@@ -536,6 +549,8 @@ Other strong future extensions include:
 - **recipe suggestion flow**, where users submit ideas and administrators approve them into the catalog;
 - **profile history page**, where users can revisit previous plans, shopping results, and recurring planning patterns.
 
+The current frontend now includes that profile history page and supports filtering it by plan or custom date interval.
+
 ---
 
 ## Questions the Frontend Contract Should Already Answer
@@ -560,10 +575,14 @@ In addition to the original MVP foundation, the current frontend also includes:
 
 - multiple mocked meal plans covering `this_week`, `next_week`, `this_month`, and `custom_range`;
 - active plan selection shared between the planner, planned meals page, and shopping list page;
+- empty-plan creation for starting a new planning setup without modifying seeded examples;
+- a tabbed planner flow with setup, meal entry, entry list, and calendar overview tabs;
+- strict active-plan window validation so out-of-range meals and recurrences are rejected or pruned;
 - recurrence-aware shopping list aggregation tied to the selected plan;
 - shopping list status tracking per active plan;
 - meal-occurrence filtering inside the shopping list;
-- a floating shopping progress widget for quick progress visibility.
+- a floating shopping progress widget for quick progress visibility;
+- a profile history page that can filter saved plan summaries by selected plan or custom date interval.
 
 The remaining work is now focused on future extensions rather than the original MVP foundation.
 
@@ -605,6 +624,10 @@ This checklist reflects the current implementation status of the frontend.
 	- Keep more than one mocked meal plan available at the same time.
 	- Let the UI switch the active plan consistently across the planner, planned meals page, and shopping list page.
 
+- [x] **Support empty-plan creation and strict plan windows**
+	- Let users create a fresh plan with no meals assigned.
+	- Keep the active plan range authoritative by rejecting or pruning out-of-range entries and recurrences.
+
 - [x] **Add recurrence expansion and series editing support**
 	- Support both editing a single occurrence and editing the full recurring series.
 	- Keep `series_id` handling explicit so future backend integration is straightforward.
@@ -626,6 +649,7 @@ This checklist reflects the current implementation status of the frontend.
 - [x] **Build the meal plan builder page**
 	- Add calendar-based planning, meal slot assignment, servings override, recurrence creation, and recurrence editing.
 	- This is the main workflow screen and should be treated as the core experience.
+	- The current implementation also includes a tabbed flow and a calendar overview tab for the active range.
 
 - [x] **Build the shopping list page**
 	- Show aggregated items, grouped totals, and status tracking such as `pending`, `bought`, `skipped`, and `already_available`.
@@ -641,6 +665,7 @@ This checklist reflects the current implementation status of the frontend.
 - [x] **Add profile history page**
 	- Show previous meal plans, recurring planning patterns, and past shopping summaries.
 	- This supports retention and helps users reuse successful plans.
+	- The current implementation also supports filtering the history by saved plan or custom date interval.
 
 - [ ] **Add recipe suggestion flow**
 	- Let users submit recipe ideas for administrator review.
