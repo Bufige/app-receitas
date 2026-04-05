@@ -19,7 +19,11 @@
 	} from "$lib/types/planning";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
-	import { expand_meal_plan_entries } from "$lib/utils/planning";
+	import {
+		expand_meal_plan_entries,
+		format_plan_range_label,
+		format_plan_selection_label,
+	} from "$lib/utils/planning";
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
@@ -41,7 +45,9 @@
 	let recurrence_count = $state("");
 	let editing_entry_id = $state<string | null>(null);
 	let editing_series_id = $state<string | null>(null);
+	let last_active_plan_id = $state(meal_plan_store.activePlanId);
 
+	const available_plans = $derived(meal_plan_store.mealPlans);
 	const entries = $derived(meal_plan_store.mealPlan.entries);
 	const conflicts = $derived(meal_plan_store.conflicts);
 	const expanded_entries = $derived.by(() =>
@@ -54,18 +60,9 @@
 	const recurring_series_count = $derived.by(
 		() => new Set(entries.map((entry) => entry.series_id).filter(Boolean)).size,
 	);
-	const plan_range_label = $derived.by(() => {
-		const { start_date, end_date } = meal_plan_store.mealPlan;
-		if (!start_date && !end_date) {
-			return "—";
-		}
-
-		if (!start_date || !end_date || start_date === end_date) {
-			return start_date ?? end_date ?? "—";
-		}
-
-		return `${start_date} → ${end_date}`;
-	});
+	const plan_range_label = $derived.by(() =>
+		format_plan_range_label(meal_plan_store.mealPlan),
+	);
 	const preview_days = $derived.by(() => {
 		const grouped = new Map<
 			string,
@@ -94,6 +91,17 @@
 		if (recipe_from_query) {
 			selected_recipe_id = recipe_from_query;
 		}
+	});
+
+	$effect(() => {
+		const next_active_plan_id = meal_plan_store.activePlanId;
+
+		if (next_active_plan_id === last_active_plan_id) {
+			return;
+		}
+
+		last_active_plan_id = next_active_plan_id;
+		reset_form();
 	});
 
 	function build_recurrence_rule(): RecurrenceRule | undefined {
@@ -248,6 +256,12 @@
 	function set_preset(preset: PlanningPreset) {
 		meal_plan_store.setPlanningPreset(preset);
 	}
+
+	function select_plan(event: Event) {
+		meal_plan_store.selectPlan(
+			(event.currentTarget as HTMLSelectElement).value,
+		);
+	}
 </script>
 
 <SEO title={m.seo_planner_title()} description={m.seo_planner_description()} />
@@ -313,6 +327,24 @@
 					<p class="eyebrow">{m.planner_eyebrow()}</p>
 					<h2>{m.planner_settings_title()}</h2>
 					<p>{m.planner_settings_subtitle()}</p>
+				</div>
+
+				<div class="field-group">
+					<label for="active-plan">{m.planner_plan_name_label()}</label>
+					<select
+						id="active-plan"
+						value={meal_plan_store.activePlanId}
+						onchange={select_plan}
+					>
+						{#each available_plans as plan}
+							<option value={plan.id}
+								>{format_plan_selection_label(plan)}</option
+							>
+						{/each}
+					</select>
+					<p class="field-note">
+						{format_plan_range_label(meal_plan_store.mealPlan)}
+					</p>
 				</div>
 
 				<div class="field-group">
@@ -721,11 +753,13 @@
 	.planner-main {
 		display: grid;
 		gap: 1rem;
+		min-width: 0;
 	}
 
 	.panel {
 		padding: 1rem;
 		border-radius: 24px;
+		min-width: 0;
 
 		@include md {
 			padding: 1.15rem;
@@ -782,6 +816,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.4rem;
+		min-width: 0;
+		max-width: 100%;
 
 		label {
 			font-size: 0.875rem;
@@ -791,12 +827,26 @@
 		input,
 		select {
 			width: 100%;
+			max-width: 100%;
+			min-width: 0;
 			padding: 0.75rem 0.85rem;
 			background-color: color-mix(in srgb, var(--surface) 92%, transparent);
 			border: 1px solid var(--border);
 			border-radius: 16px;
 			color: var(--text);
 		}
+
+		select {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+	}
+
+	.field-note {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+		overflow-wrap: anywhere;
 	}
 
 	.checkbox-row {

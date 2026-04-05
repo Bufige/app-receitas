@@ -18,7 +18,11 @@
 		ShoppingListItem,
 		ShoppingItemStatus,
 	} from "$lib/types/planning";
-	import { expand_meal_plan_entries } from "$lib/utils/planning";
+	import {
+		expand_meal_plan_entries,
+		format_plan_range_label,
+		format_plan_selection_label,
+	} from "$lib/utils/planning";
 	import {
 		build_planned_meal_key,
 		calculate_shopping_list_from_occurrences,
@@ -29,6 +33,7 @@
 	import { localizeHref } from "$lib/paraglide/runtime";
 
 	const meal_plan_store = useMealPlanStore();
+	const available_plans = $derived(meal_plan_store.mealPlans);
 	let selected_occurrence_keys = $state<string[]>([]);
 	let shopping_item_statuses = $state<Record<string, ShoppingItemStatus>>({
 		...meal_plan_store.shoppingItemStatuses,
@@ -109,18 +114,9 @@
 
 		return build_shopping_view(items);
 	});
-	const range_label = $derived.by(() => {
-		const { start_date, end_date } = meal_plan_store.mealPlan;
-		if (!start_date && !end_date) {
-			return "—";
-		}
-
-		if (!start_date || !end_date || start_date === end_date) {
-			return start_date ?? end_date ?? "—";
-		}
-
-		return `${start_date} → ${end_date}`;
-	});
+	const range_label = $derived.by(() =>
+		format_plan_range_label(meal_plan_store.mealPlan),
+	);
 	const is_floating_progress_dragging = $derived(
 		floating_progress_drag !== null,
 	);
@@ -139,6 +135,12 @@
 
 		return first.every((value, index) => value === second[index]);
 	}
+
+	$effect(() => {
+		shopping_item_statuses = {
+			...meal_plan_store.shoppingItemStatuses,
+		};
+	});
 
 	$effect(() => {
 		const next_keys = expanded_entries.map((entry) =>
@@ -340,6 +342,12 @@
 			floating_progress_position.y,
 		);
 	}
+
+	function select_plan(event: Event) {
+		meal_plan_store.selectPlan(
+			(event.currentTarget as HTMLSelectElement).value,
+		);
+	}
 </script>
 
 <svelte:window
@@ -377,6 +385,28 @@
 			</div>
 		{/snippet}
 	</PageHero>
+
+	<section class="plan-picker surface-panel">
+		<div class="plan-picker__copy">
+			<p>{m.planner_overview_period()}</p>
+			<strong title={meal_plan_store.mealPlan.name}
+				>{meal_plan_store.mealPlan.name}</strong
+			>
+			<span title={range_label}>{range_label}</span>
+		</div>
+		<div class="field-group">
+			<label for="shopping-plan">{m.planner_plan_name_label()}</label>
+			<select
+				id="shopping-plan"
+				value={meal_plan_store.activePlanId}
+				onchange={select_plan}
+			>
+				{#each available_plans as plan}
+					<option value={plan.id}>{format_plan_selection_label(plan)}</option>
+				{/each}
+			</select>
+		</div>
+	</section>
 
 	<div class="summary-grid">
 		<button
@@ -690,6 +720,43 @@
 
 		@include md {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	.plan-picker {
+		display: grid;
+		gap: 0.9rem;
+		padding: 1rem;
+		min-width: 0;
+		max-width: 100%;
+
+		@include md {
+			grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+			align-items: end;
+		}
+	}
+
+	.plan-picker__copy {
+		display: grid;
+		gap: 0.2rem;
+		min-width: 0;
+
+		p,
+		span {
+			color: var(--text-muted);
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		strong {
+			display: block;
+			font-size: 1.05rem;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
 		}
 	}
 
@@ -1121,6 +1188,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.4rem;
+		min-width: 0;
+		max-width: 100%;
 
 		label {
 			font-size: 0.82rem;
@@ -1129,11 +1198,17 @@
 		}
 
 		select {
+			width: 100%;
+			max-width: 100%;
+			min-width: 0;
 			padding: 0.75rem 0.85rem;
 			background-color: color-mix(in srgb, var(--surface) 92%, transparent);
 			border: 1px solid var(--border);
 			border-radius: 16px;
 			color: var(--text);
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
 		}
 	}
 

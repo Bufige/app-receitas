@@ -6,6 +6,8 @@ This application helps users plan meals for a week or month based on a list of r
 
 The main business goal is to let users build a meal plan, then automatically calculate a consolidated shopping list showing how much of each ingredient they need to buy.
 
+The current frontend already supports keeping multiple saved meal plans and switching the active plan across the planner, planned meals view, and shopping list. This makes it possible to compare different planning horizons such as `this_week`, `next_week`, `this_month`, and `custom_range` without losing previously configured plans.
+
 Since this is a frontend-only project for now, the immediate priority is to define the data structures the UI expects and to work with mocked data until the backend contract is implemented.
 
 Recipes themselves are managed by an administrator. Regular users do not create recipes directly; they browse the available recipe catalog, build meal plans, and generate shopping lists from those administrator-provided recipes.
@@ -18,6 +20,7 @@ Recipes themselves are managed by an administrator. Regular users do not create 
 - Let users choose recipes for specific days or periods.
 - Support planning for different durations, such as a full week or full month.
 - Offer planning horizon presets such as `this_week`, `next_week`, `this_month`, and `custom_range`.
+- Allow users to keep multiple saved meal plans and switch the active plan by range, name, or plan id.
 - Allow users to schedule recurring recipes across days, weeks, months, or years from a calendar view.
 - Let users define a default household serving size and override servings per planned meal.
 - Aggregate ingredient quantities across selected recipes.
@@ -62,6 +65,7 @@ Users should be able to:
 
 - choose a planning period (weekly or monthly);
 - choose a planning preset such as `this_week`, `next_week`, `this_month`, or a custom date range;
+- switch between previously created plans without overwriting the currently selected planner context;
 - assign recipes to specific days and meals;
 - repeat the same recipe on multiple days if desired;
 - select a date in a calendar and define a recurrence for the next days, weeks, months, or years;
@@ -82,6 +86,8 @@ After a plan is created, the app should:
 - sum repeated ingredients across multiple recipes;
 - show total quantities grouped by ingredient;
 - let users track shopping progress by marking items as bought, skipped, or already available at home;
+- let users filter the shopping calculation by selected planned meals inside the active plan;
+- keep a persistent shopping progress indicator visible while reviewing the list;
 - optionally group by category later, such as vegetables, meat, dairy, grains, etc.
 
 Example:
@@ -183,6 +189,8 @@ type RecipeInstruction = {
 ### Meal Plan
 
 The meal plan represents the recipes selected by the user across a time period.
+
+In the current frontend experience, users can maintain more than one meal plan at the same time. One plan is treated as the active selection, and related screens such as the planner, planned meals page, and shopping list page all react to that selected plan.
 
 ```ts
 type MealPlan = {
@@ -548,6 +556,15 @@ If these answers are stable, the backend can later mirror the same object struct
 
 The frontend foundation described in this document has already been implemented with mocked data and working screens for the core user flow.
 
+In addition to the original MVP foundation, the current frontend also includes:
+
+- multiple mocked meal plans covering `this_week`, `next_week`, `this_month`, and `custom_range`;
+- active plan selection shared between the planner, planned meals page, and shopping list page;
+- recurrence-aware shopping list aggregation tied to the selected plan;
+- shopping list status tracking per active plan;
+- meal-occurrence filtering inside the shopping list;
+- a floating shopping progress widget for quick progress visibility.
+
 The remaining work is now focused on future extensions rather than the original MVP foundation.
 
 ---
@@ -584,6 +601,10 @@ This checklist reflects the current implementation status of the frontend.
 	- Store current plan data, entries, recurrence edits, selected period, and any calendar conflict state.
 	- This state layer should be designed so one-time and recurring entries are easy to update.
 
+- [x] **Support multiple saved meal plans with active selection**
+	- Keep more than one mocked meal plan available at the same time.
+	- Let the UI switch the active plan consistently across the planner, planned meals page, and shopping list page.
+
 - [x] **Add recurrence expansion and series editing support**
 	- Support both editing a single occurrence and editing the full recurring series.
 	- Keep `series_id` handling explicit so future backend integration is straightforward.
@@ -609,6 +630,7 @@ This checklist reflects the current implementation status of the frontend.
 - [x] **Build the shopping list page**
 	- Show aggregated items, grouped totals, and status tracking such as `pending`, `bought`, `skipped`, and `already_available`.
 	- This page should consume the calculation helper output instead of duplicating logic.
+	- The current implementation also supports meal-level filtering and a persistent progress widget.
 
 - [x] **Build the household profile page**
 	- Let users configure default servings and household preferences relevant to the current MVP.

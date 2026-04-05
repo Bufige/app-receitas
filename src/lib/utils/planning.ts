@@ -1,6 +1,7 @@
 import type {
 	ConflictWarning,
 	ExpandedMealPlanEntry,
+	MealPlan,
 	MealPlanEntry,
 	PlanningPreset,
 	RecurrenceRule,
@@ -106,6 +107,30 @@ export function get_preset_range(
 				end_date: format_iso_date(normalized_reference),
 			};
 	}
+}
+
+export function format_plan_range_label(plan: {
+	start_date?: MealPlan["start_date"];
+	end_date?: MealPlan["end_date"];
+}): string {
+	if (!plan.start_date && !plan.end_date) {
+		return "—";
+	}
+
+	if (!plan.start_date || !plan.end_date || plan.start_date === plan.end_date) {
+		return plan.start_date ?? plan.end_date ?? "—";
+	}
+
+	return `${plan.start_date} → ${plan.end_date}`;
+}
+
+export function format_plan_selection_label(plan: {
+	id: MealPlan["id"];
+	name: MealPlan["name"];
+	start_date?: MealPlan["start_date"];
+	end_date?: MealPlan["end_date"];
+}): string {
+	return `${plan.name} · ${format_plan_range_label(plan)} · ${plan.id}`;
 }
 
 export function expand_meal_plan_entries(

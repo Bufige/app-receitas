@@ -10,10 +10,15 @@
 	import type { ExpandedMealPlanEntry, MealType } from "$lib/types/planning";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
-	import { expand_meal_plan_entries } from "$lib/utils/planning";
+	import {
+		expand_meal_plan_entries,
+		format_plan_range_label,
+		format_plan_selection_label,
+	} from "$lib/utils/planning";
 
 	const meal_plan_store = useMealPlanStore();
 	const meal_types: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
+	const available_plans = $derived(meal_plan_store.mealPlans);
 
 	const expanded_entries = $derived.by(() =>
 		expand_meal_plan_entries(
@@ -22,18 +27,9 @@
 			meal_plan_store.mealPlan.end_date,
 		),
 	);
-	const range_label = $derived.by(() => {
-		const { start_date, end_date } = meal_plan_store.mealPlan;
-		if (!start_date && !end_date) {
-			return "—";
-		}
-
-		if (!start_date || !end_date || start_date === end_date) {
-			return start_date ?? end_date ?? "—";
-		}
-
-		return `${start_date} → ${end_date}`;
-	});
+	const range_label = $derived.by(() =>
+		format_plan_range_label(meal_plan_store.mealPlan),
+	);
 	const recurring_entries = $derived.by(
 		() =>
 			expanded_entries.filter((entry) => Boolean(entry.recurrence_rule)).length,
@@ -83,6 +79,12 @@
 				return m.planner_meal_type_snack();
 		}
 	}
+
+	function select_plan(event: Event) {
+		meal_plan_store.selectPlan(
+			(event.currentTarget as HTMLSelectElement).value,
+		);
+	}
 </script>
 
 <SEO
@@ -108,6 +110,28 @@
 			</div>
 		{/snippet}
 	</PageHero>
+
+	<section class="plan-picker surface-panel">
+		<div class="plan-picker__copy">
+			<p>{m.planner_overview_period()}</p>
+			<strong title={meal_plan_store.mealPlan.name}
+				>{meal_plan_store.mealPlan.name}</strong
+			>
+			<span title={range_label}>{range_label}</span>
+		</div>
+		<div class="field-group">
+			<label for="planned-meals-plan">{m.planner_plan_name_label()}</label>
+			<select
+				id="planned-meals-plan"
+				value={meal_plan_store.activePlanId}
+				onchange={select_plan}
+			>
+				{#each available_plans as plan}
+					<option value={plan.id}>{format_plan_selection_label(plan)}</option>
+				{/each}
+			</select>
+		</div>
+	</section>
 
 	<div class="stats-grid">
 		<article class="stat-card surface-panel">
@@ -217,6 +241,70 @@
 
 		@include md {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	.plan-picker {
+		display: grid;
+		gap: 0.9rem;
+		padding: 1rem;
+		min-width: 0;
+		max-width: 100%;
+
+		@include md {
+			grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+			align-items: end;
+		}
+	}
+
+	.plan-picker__copy {
+		display: grid;
+		gap: 0.2rem;
+		min-width: 0;
+
+		p,
+		span {
+			color: var(--text-muted);
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		strong {
+			display: block;
+			font-size: 1.05rem;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+	}
+
+	.field-group {
+		display: grid;
+		gap: 0.45rem;
+		min-width: 0;
+		max-width: 100%;
+
+		label {
+			font-size: 0.85rem;
+			font-weight: 700;
+			color: var(--text-muted);
+		}
+
+		select {
+			width: 100%;
+			max-width: 100%;
+			min-width: 0;
+			padding: 0.75rem 0.85rem;
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			background: color-mix(in srgb, var(--surface) 95%, transparent);
+			color: var(--text);
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
 		}
 	}
 
