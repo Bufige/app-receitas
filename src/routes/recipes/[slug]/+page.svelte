@@ -24,33 +24,27 @@
 			>{m.recipe_detail_back()}</a
 		>
 
-		<PageHero title={recipe.name} subtitle={recipe.description}>
-			{#snippet actions()}
-				<Button
-					class="planner-link"
-					variant="primary"
-					size="medium"
-					round
-					href={localizeHref(`/planner?recipe=${recipe.id}`)}
-				>
-					{m.recipe_detail_add_to_plan()}
-				</Button>
-			{/snippet}
-		</PageHero>
+		<PageHero title={recipe.name} subtitle={recipe.description} />
 
-		<div class="overview" class:without-image={!recipe.image_url}>
+		<div class="overview">
 			{#if recipe.image_url}
 				<img class="image" src={recipe.image_url} alt={recipe.name} />
 			{/if}
 
 			<div class="summary-panel">
 				<div class="meta">
-					<span>{m.recipes_servings()}: {recipe.servings}</span>
-					<span
-						>{m.recipes_prep_time()}: {m.recipes_minutes({
-							count: `${recipe.preparation_time_in_minutes}`,
-						})}</span
-					>
+					<div class="meta-card">
+						<small>{m.recipes_servings()}</small>
+						<strong>{recipe.servings}</strong>
+					</div>
+					<div class="meta-card">
+						<small>{m.recipes_prep_time()}</small>
+						<strong
+							>{m.recipes_minutes({
+								count: `${recipe.preparation_time_in_minutes}`,
+							})}</strong
+						>
+					</div>
 				</div>
 
 				{#if recipe.tags?.length}
@@ -85,6 +79,16 @@
 				</ol>
 			</section>
 		</div>
+
+		<Button
+			class="floating-cta"
+			variant="primary"
+			size="medium"
+			round
+			href={localizeHref(`/planner?recipe=${recipe.id}`)}
+		>
+			{m.recipe_detail_add_to_plan()}
+		</Button>
 	</section>
 {:else}
 	<SEO
@@ -108,6 +112,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
+	}
+
+	.page {
+		padding-bottom: 6rem;
+
+		@include md {
+			padding-bottom: 7rem;
+		}
 	}
 
 	.back-link,
@@ -144,18 +156,9 @@
 	}
 
 	.overview {
-		display: grid;
-		grid-template-columns: 1fr;
+		display: flex;
+		flex-direction: column;
 		gap: 1rem;
-
-		@include lg {
-			grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 0.8fr);
-			align-items: start;
-		}
-
-		&.without-image {
-			grid-template-columns: 1fr;
-		}
 	}
 
 	.image {
@@ -175,15 +178,65 @@
 	.summary-panel {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
-		padding: 1rem;
+		gap: 0.85rem;
+		padding: 0.9rem 1rem;
 		border-radius: 20px;
 		border: 1px solid var(--border);
 		background-color: color-mix(in srgb, var(--surface) 94%, transparent);
 		box-shadow: var(--soft-box-shadow);
 
 		@include lg {
-			min-height: 100%;
+			padding: 0.85rem 1rem;
+		}
+	}
+
+	.meta {
+		gap: 0.75rem;
+	}
+
+	.meta-card {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		padding: 0.7rem 0.85rem;
+		min-width: 8.5rem;
+		border-radius: 16px;
+		border: 1px solid color-mix(in srgb, var(--primary) 8%, var(--border));
+		background-color: color-mix(in srgb, var(--surface) 98%, transparent);
+
+		small {
+			font-size: 0.75rem;
+			font-weight: 600;
+			color: var(--text-muted);
+		}
+
+		strong {
+			font-size: 1rem;
+			color: var(--text);
+		}
+	}
+
+	:global(.btn.floating-cta) {
+		position: fixed;
+		left: auto;
+		right: 1rem;
+		bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+		width: fit-content;
+		max-width: calc(100vw - 2rem);
+		min-width: 0;
+		padding-inline: 1rem;
+		margin: 0;
+		display: inline-flex;
+		justify-content: center;
+		box-shadow: var(--high-box-shadow);
+		z-index: 120;
+
+		@include md {
+			right: 1.5rem;
+			bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+			width: fit-content;
+			max-width: none;
+			min-width: 12rem;
 		}
 	}
 

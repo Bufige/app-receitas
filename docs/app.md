@@ -258,8 +258,6 @@ type HouseholdProfile = {
 	default_servings: number;
 	dietary_preferences?: string[];
 	disliked_ingredients?: string[];
-	budget_mode?: 'economy' | 'balanced' | 'premium';
-	seasonal_mode_enabled?: boolean;
 };
 ```
 
@@ -333,9 +331,7 @@ export const mock_household_profile: HouseholdProfile = {
 	name: 'Default Household',
 	default_servings: 4,
 	dietary_preferences: [],
-	disliked_ingredients: [],
-	budget_mode: 'balanced',
-	seasonal_mode_enabled: false
+	disliked_ingredients: []
 };
 ```
 
@@ -528,7 +524,6 @@ Another important next step is a **profile page** where users can review their m
 
 Other strong future extensions include:
 
-- **seasonal and budget modes**, so recipe suggestions and planning defaults can adapt to ingredient seasonality or spending goals;
 - **shared household planning**, so multiple people in the same household can collaborate on the calendar and shopping list;
 - **recipe suggestion flow**, where users submit ideas and administrators approve them into the catalog;
 - **profile history page**, where users can revisit previous plans, shopping results, and recurring planning patterns.
@@ -595,7 +590,7 @@ The frontend should be implemented in this order so the foundations are ready be
 ### Phase 2 — Planning State
 
 5. **Create the household profile store**
-	- Store defaults such as `default_servings`, budget mode, and seasonal mode preference.
+	- Store defaults such as `default_servings` and other household planning preferences.
 	- This should live in `src/lib/stores/` using the project rune-based store pattern.
 
 6. **Create the meal planning store**
@@ -642,11 +637,7 @@ The frontend should be implemented in this order so the foundations are ready be
 	- Let users submit recipe ideas for administrator review.
 	- Keep it separate from the administrator-managed recipe catalog.
 
-16. **Add seasonal and budget modes**
-	- Adapt planning defaults and future suggestions based on seasonality or budget preference.
-	- This can start as a household setting before becoming a smarter recommendation feature.
-
-17. **Add shared household planning**
+16. **Add shared household planning**
 	- Allow multiple household members to collaborate on meal planning and shopping progress.
 	- This should come later, after the single-user flow is stable.
 

@@ -18,8 +18,6 @@
 	let disliked_ingredients = $state(
 		(profile.disliked_ingredients ?? []).join(", "),
 	);
-	let budget_mode = $state(profile.budget_mode ?? "balanced");
-	let seasonal_mode_enabled = $state(profile.seasonal_mode_enabled ?? false);
 
 	function parse_list(value: string): string[] {
 		return value
@@ -34,22 +32,8 @@
 			default_servings: Math.max(1, Number(default_servings) || 1),
 			dietary_preferences: parse_list(dietary_preferences),
 			disliked_ingredients: parse_list(disliked_ingredients),
-			budget_mode,
-			seasonal_mode_enabled,
 		});
 		announce(m.a11y_household_saved());
-	}
-
-	function format_budget_mode(value: string): string {
-		if (value === "economy") {
-			return m.household_budget_economy();
-		}
-
-		if (value === "premium") {
-			return m.household_budget_premium();
-		}
-
-		return m.household_budget_balanced();
 	}
 </script>
 
@@ -106,24 +90,6 @@
 				bind:value={disliked_ingredients}
 			/>
 
-			<div class="field-group">
-				<label for="budget-mode">{m.household_budget_mode_label()}</label>
-				<select id="budget-mode" bind:value={budget_mode}>
-					<option value="economy">{m.household_budget_economy()}</option>
-					<option value="balanced">{m.household_budget_balanced()}</option>
-					<option value="premium">{m.household_budget_premium()}</option>
-				</select>
-			</div>
-
-			<label class="checkbox-row" for="seasonal-mode-enabled">
-				<input
-					id="seasonal-mode-enabled"
-					type="checkbox"
-					bind:checked={seasonal_mode_enabled}
-				/>
-				<span>{m.household_seasonal_mode_label()}</span>
-			</label>
-
 			<div class="actions">
 				<Button variant="primary" size="medium" round onclick={save_profile}>
 					{m.household_save()}
@@ -140,10 +106,6 @@
 					<strong>{profile.default_servings}</strong>
 				</div>
 				<div>
-					<span>{m.household_budget_mode_label()}</span>
-					<strong>{format_budget_mode(budget_mode)}</strong>
-				</div>
-				<div>
 					<span>{m.household_dietary_preferences_label()}</span>
 					<strong>{profile.dietary_preferences?.join(", ") || "—"}</strong>
 				</div>
@@ -151,9 +113,6 @@
 					<span>{m.household_disliked_ingredients_label()}</span>
 					<strong>{profile.disliked_ingredients?.join(", ") || "—"}</strong>
 				</div>
-			</div>
-			<div class="seasonal-chip" class:enabled={seasonal_mode_enabled}>
-				{m.household_seasonal_mode_label()}
 			</div>
 		</aside>
 	</div>
@@ -237,23 +196,13 @@
 			font-weight: 500;
 		}
 
-		input,
-		select {
+		input {
 			width: 100%;
 			padding: 0.625rem 0.75rem;
 			background-color: color-mix(in srgb, var(--surface) 78%, transparent);
 			border: 1px solid var(--border);
 			border-radius: 12px;
 		}
-	}
-
-	.checkbox-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.875rem 1rem;
-		border-radius: 16px;
-		background-color: color-mix(in srgb, var(--secondary) 10%, transparent);
 	}
 
 	.actions {
@@ -286,20 +235,6 @@
 		span {
 			font-size: 0.8125rem;
 			color: var(--text-muted);
-		}
-	}
-
-	.seasonal-chip {
-		align-self: flex-start;
-		padding: 0.45rem 0.8rem;
-		border-radius: 999px;
-		background-color: color-mix(in srgb, var(--border) 40%, transparent);
-		font-size: 0.8125rem;
-		font-weight: 600;
-
-		&.enabled {
-			background-color: color-mix(in srgb, var(--primary) 16%, transparent);
-			color: var(--primary);
 		}
 	}
 </style>

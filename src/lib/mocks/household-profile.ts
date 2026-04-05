@@ -6,6 +6,4 @@ export const mock_household_profile: HouseholdProfile = {
 	default_servings: 4,
 	dietary_preferences: [],
 	disliked_ingredients: [],
-	budget_mode: "balanced",
-	seasonal_mode_enabled: false,
 };

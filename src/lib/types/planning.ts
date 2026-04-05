@@ -13,7 +13,6 @@ export type ShoppingItemStatus =
 	| "bought"
 	| "skipped"
 	| "already_available";
-export type BudgetMode = "economy" | "balanced" | "premium";
 
 export type RecurrenceRule = {
 	frequency: RecurrenceFrequency;
@@ -62,8 +61,6 @@ export type HouseholdProfile = {
 	default_servings: number;
 	dietary_preferences?: string[];
 	disliked_ingredients?: string[];
-	budget_mode?: BudgetMode;
-	seasonal_mode_enabled?: boolean;
 };
 
 export type ConflictWarning = {
