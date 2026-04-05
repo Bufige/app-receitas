@@ -580,6 +580,34 @@ export function useMealPlanStore() {
 			persist_plans();
 			persist_statuses();
 		},
+		deleteCurrentPlan() {
+			const household_plans = get_plans_for_household(
+				meal_plans,
+				household_profile.activeHouseholdId,
+			);
+
+			if (household_plans.length === 0) {
+				return false;
+			}
+
+			const current_plan =
+				household_plans.find((plan) => plan.id === active_plan_id) ??
+				household_plans[0];
+
+			meal_plans = meal_plans.filter((plan) => plan.id !== current_plan.id);
+			shopping_item_statuses = Object.fromEntries(
+				Object.entries(shopping_item_statuses).filter(
+					([key]) => !key.startsWith(`${current_plan.id}:`),
+				),
+			) as Record<string, ShoppingItemStatus>;
+			active_plan_id = resolve_active_plan_id(
+				meal_plans,
+				household_profile.activeHouseholdId,
+			);
+			persist_plans();
+			persist_statuses();
+			return true;
+		},
 		deleteHouseholdPlans(
 			household_id: string,
 			next_household_id = household_profile.activeHouseholdId,

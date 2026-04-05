@@ -159,6 +159,23 @@
 		);
 	}
 
+	function planner_delete_plan_label(): string {
+		return get_optional_message(
+			"planner_delete_plan",
+			localized_fallback("Delete plan", "Excluir plano"),
+		);
+	}
+
+	function planner_empty_setup_hint(): string {
+		return get_optional_message(
+			"planner_empty_setup_hint",
+			localized_fallback(
+				"This household does not have a plan yet. Create one to configure dates and start adding meals.",
+				"Esta casa ainda não tem um plano. Crie um para configurar as datas e começar a adicionar refeições.",
+			),
+		);
+	}
+
 	const planner_tabs = [
 		{
 			id: "setup" as const,
@@ -184,6 +201,7 @@
 
 	const available_households = $derived(household_store.profiles);
 	const available_plans = $derived(meal_plan_store.mealPlans);
+	const has_available_plans = $derived.by(() => available_plans.length > 0);
 	const entries = $derived(meal_plan_store.mealPlan.entries);
 	const conflicts = $derived(meal_plan_store.conflicts);
 	const expanded_entries = $derived.by(() =>
@@ -322,6 +340,12 @@
 		active_tab = "setup";
 		planner_feedback = null;
 		reset_form();
+	});
+
+	$effect(() => {
+		if (!has_available_plans && active_tab !== "setup") {
+			active_tab = "setup";
+		}
 	});
 
 	function show_planner_feedback(message: string) {
@@ -550,6 +574,16 @@
 		clear_planner_feedback();
 	}
 
+	function delete_current_plan() {
+		if (!meal_plan_store.deleteCurrentPlan()) {
+			return;
+		}
+
+		active_tab = "setup";
+		clear_planner_feedback();
+		reset_form();
+	}
+
 	function clear_current_plan() {
 		meal_plan_store.clearPlan();
 		active_tab = "setup";
@@ -565,54 +599,6 @@
 <SEO title={m.seo_planner_title()} description={m.seo_planner_description()} />
 
 <section class="page">
-	<section class="planner-context surface-panel">
-		<div class="planner-context__copy">
-			<p class="eyebrow">{m.planner_active_plan_label()}</p>
-			<h2 title={meal_plan_store.mealPlan.name}>
-				{meal_plan_store.mealPlan.name}
-			</h2>
-			<p title={active_plan_summary}>{active_plan_summary}</p>
-			<span class="plan-id">
-				<span class="plan-id__household">{household_store.profile.name}</span>
-				<span class="plan-id__separator" aria-hidden="true">·</span>
-				<span class="plan-id__value">{meal_plan_store.activePlanId}</span>
-			</span>
-		</div>
-		<div class="planner-context__controls">
-			<div class="field-group">
-				<label for="active-household">{planner_household_label()}</label>
-				<select
-					id="active-household"
-					value={household_store.activeHouseholdId}
-					onchange={select_household}
-				>
-					{#each available_households as household}
-						<option value={household.id}>{household.name}</option>
-					{/each}
-				</select>
-				<p class="field-note">{planner_household_hint()}</p>
-			</div>
-			<div class="field-group">
-				<label for="active-plan">{m.planner_active_plan_label()}</label>
-				<select
-					id="active-plan"
-					value={meal_plan_store.activePlanId}
-					onchange={select_plan}
-				>
-					{#each available_plans as plan}
-						<option value={plan.id}>{format_plan_selection_label(plan)}</option>
-					{/each}
-				</select>
-			</div>
-			<div class="planner-context__cta">
-				<Button variant="primary" size="medium" round onclick={create_plan}>
-					{m.planner_create_plan()}
-				</Button>
-				<p class="field-note">{m.planner_create_plan_hint()}</p>
-			</div>
-		</div>
-	</section>
-
 	{#if planner_feedback}
 		<div class="planner-feedback" role="status" aria-live="polite">
 			<p>{planner_feedback}</p>
@@ -641,9 +627,9 @@
 					</span>
 					<span>{tab.label()}</span>
 					{#if tab.id === "entries"}
-						<small>{entries.length}</small>
+						<small>{has_available_plans ? entries.length : 0}</small>
 					{:else if tab.id === "overview"}
-						<small>{expanded_entries.length}</small>
+						<small>{has_available_plans ? expanded_entries.length : 0}</small>
 					{/if}
 				</button>
 			{/each}
@@ -662,91 +648,150 @@
 					<p>{m.planner_settings_subtitle()}</p>
 				</div>
 
-				<div class="field-group">
-					<label for="plan-name">{m.planner_plan_name_label()}</label>
-					<input
-						id="plan-name"
-						type="text"
-						value={meal_plan_store.mealPlan.name}
-						oninput={(event) =>
-							meal_plan_store.setName(
-								(event.currentTarget as HTMLInputElement).value,
-							)}
-					/>
-				</div>
-
 				<div class="split-grid">
 					<div class="field-group">
-						<label for="plan-period">{m.planner_period_label()}</label>
+						<label for="active-household">{planner_household_label()}</label>
 						<select
-							id="plan-period"
-							value={meal_plan_store.mealPlan.period}
-							onchange={(event) =>
-								meal_plan_store.setPeriod(
-									(event.currentTarget as HTMLSelectElement).value as
-										| "week"
-										| "month",
-								)}
+							id="active-household"
+							value={household_store.activeHouseholdId}
+							onchange={select_household}
 						>
-							<option value="week">{m.planner_period_week()}</option>
-							<option value="month">{m.planner_period_month()}</option>
+							{#each available_households as household}
+								<option value={household.id}>{household.name}</option>
+							{/each}
 						</select>
+						<p class="field-note">{planner_household_hint()}</p>
 					</div>
 
-					<div class="field-group">
-						<label for="plan-preset">{m.planner_preset_label()}</label>
-						<select
-							id="plan-preset"
-							value={meal_plan_store.mealPlan.planning_preset ?? "this_week"}
-							onchange={(event) =>
-								set_preset(
-									(event.currentTarget as HTMLSelectElement)
-										.value as PlanningPreset,
-								)}
-						>
-							<option value="this_week">{m.planner_preset_this_week()}</option>
-							<option value="next_week">{m.planner_preset_next_week()}</option>
-							<option value="this_month">{m.planner_preset_this_month()}</option
+					{#if has_available_plans}
+						<div class="field-group">
+							<label for="active-plan">{m.planner_active_plan_label()}</label>
+							<select
+								id="active-plan"
+								value={meal_plan_store.activePlanId}
+								onchange={select_plan}
 							>
-							<option value="custom_range"
-								>{m.planner_preset_custom_range()}</option
-							>
-						</select>
-					</div>
+								{#each available_plans as plan}
+									<option value={plan.id}
+										>{format_plan_selection_label(plan)}</option
+									>
+								{/each}
+							</select>
+						</div>
+					{/if}
 				</div>
 
-				{#if meal_plan_store.mealPlan.planning_preset === "custom_range"}
+				<div class="setup-actions">
+					<Button variant="primary" size="medium" round onclick={create_plan}>
+						{m.planner_create_plan()}
+					</Button>
+					{#if has_available_plans}
+						<Button
+							variant="danger"
+							size="medium"
+							round
+							onclick={delete_current_plan}
+						>
+							{planner_delete_plan_label()}
+						</Button>
+					{/if}
+				</div>
+				<p class="field-note">
+					{has_available_plans
+						? m.planner_create_plan_hint()
+						: planner_empty_setup_hint()}
+				</p>
+
+				{#if has_available_plans}
+					<div class="field-group">
+						<label for="plan-name">{m.planner_plan_name_label()}</label>
+						<input
+							id="plan-name"
+							type="text"
+							value={meal_plan_store.mealPlan.name}
+							oninput={(event) =>
+								meal_plan_store.setName(
+									(event.currentTarget as HTMLInputElement).value,
+								)}
+						/>
+					</div>
+
 					<div class="split-grid">
 						<div class="field-group">
-							<label for="start-date">{m.planner_custom_start_label()}</label>
-							<input
-								id="start-date"
-								type="date"
-								value={meal_plan_store.mealPlan.start_date ?? ""}
-								oninput={(event) =>
-									handle_custom_range_change(
-										(event.currentTarget as HTMLInputElement).value,
-										meal_plan_store.mealPlan.end_date ??
-											(event.currentTarget as HTMLInputElement).value,
+							<label for="plan-period">{m.planner_period_label()}</label>
+							<select
+								id="plan-period"
+								value={meal_plan_store.mealPlan.period}
+								onchange={(event) =>
+									meal_plan_store.setPeriod(
+										(event.currentTarget as HTMLSelectElement).value as
+											| "week"
+											| "month",
 									)}
-							/>
+							>
+								<option value="week">{m.planner_period_week()}</option>
+								<option value="month">{m.planner_period_month()}</option>
+							</select>
 						</div>
 
 						<div class="field-group">
-							<label for="end-date">{m.planner_custom_end_label()}</label>
-							<input
-								id="end-date"
-								type="date"
-								value={meal_plan_store.mealPlan.end_date ?? ""}
-								oninput={(event) =>
-									handle_custom_range_change(
-										meal_plan_store.mealPlan.start_date ??
-											(event.currentTarget as HTMLInputElement).value,
-										(event.currentTarget as HTMLInputElement).value,
+							<label for="plan-preset">{m.planner_preset_label()}</label>
+							<select
+								id="plan-preset"
+								value={meal_plan_store.mealPlan.planning_preset ?? "this_week"}
+								onchange={(event) =>
+									set_preset(
+										(event.currentTarget as HTMLSelectElement)
+											.value as PlanningPreset,
 									)}
-							/>
+							>
+								<option value="this_week">{m.planner_preset_this_week()}</option
+								>
+								<option value="next_week">{m.planner_preset_next_week()}</option
+								>
+								<option value="this_month"
+									>{m.planner_preset_this_month()}</option
+								>
+								<option value="custom_range"
+									>{m.planner_preset_custom_range()}</option
+								>
+							</select>
 						</div>
 					</div>
+
+					{#if meal_plan_store.mealPlan.planning_preset === "custom_range"}
+						<div class="split-grid">
+							<div class="field-group">
+								<label for="start-date">{m.planner_custom_start_label()}</label>
+								<input
+									id="start-date"
+									type="date"
+									value={meal_plan_store.mealPlan.start_date ?? ""}
+									oninput={(event) =>
+										handle_custom_range_change(
+											(event.currentTarget as HTMLInputElement).value,
+											meal_plan_store.mealPlan.end_date ??
+												(event.currentTarget as HTMLInputElement).value,
+										)}
+								/>
+							</div>
+
+							<div class="field-group">
+								<label for="end-date">{m.planner_custom_end_label()}</label>
+								<input
+									id="end-date"
+									type="date"
+									value={meal_plan_store.mealPlan.end_date ?? ""}
+									oninput={(event) =>
+										handle_custom_range_change(
+											meal_plan_store.mealPlan.start_date ??
+												(event.currentTarget as HTMLInputElement).value,
+											(event.currentTarget as HTMLInputElement).value,
+										)}
+								/>
+							</div>
+						</div>
+					{/if}
 				{/if}
 			</div>
 		{:else if active_tab === "meal"}
@@ -1092,76 +1137,20 @@
 		gap: 1rem;
 	}
 
-	.planner-context {
-		display: grid;
-		gap: 1rem;
-		padding: 1rem;
-		border-radius: 24px;
-
-		@include md {
-			padding: 1.15rem;
-		}
-
-		@include lg {
-			grid-template-columns: minmax(0, 1fr) minmax(20rem, 24rem);
-			align-items: end;
-		}
-	}
-
-	.planner-context__copy,
-	.planner-context__controls,
 	.planner-tabs {
 		display: grid;
 		gap: 1rem;
 		min-width: 0;
 	}
 
-	.planner-context__copy {
-		h2 {
-			font-size: 1.4rem;
-			line-height: 1.05;
-		}
-
-		p {
-			color: var(--text-muted);
-		}
-	}
-
-	.plan-id {
-		display: inline-flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.2rem 0.35rem;
-		width: fit-content;
-		max-width: 100%;
-		min-width: 0;
-		padding: 0.35rem 0.65rem;
-		border-radius: 999px;
-		border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
-		background: color-mix(in srgb, var(--surface-muted) 82%, var(--surface));
-		font-size: 0.78rem;
-		font-weight: 700;
-		color: var(--primary);
-		white-space: normal;
-	}
-
-	.plan-id__separator {
-		flex: 0 0 auto;
-	}
-
-	.plan-id__household,
-	.plan-id__value {
-		min-width: 0;
-	}
-
-	.plan-id__value {
-		overflow-wrap: anywhere;
-		word-break: break-word;
-	}
-
-	.planner-context__cta {
+	.setup-actions {
 		display: grid;
-		gap: 0.5rem;
+		gap: 0.75rem;
+
+		@include md {
+			display: flex;
+			flex-wrap: wrap;
+		}
 	}
 
 	.planner-tabs {
