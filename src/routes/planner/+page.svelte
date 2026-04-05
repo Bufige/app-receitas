@@ -572,9 +572,11 @@
 				{meal_plan_store.mealPlan.name}
 			</h2>
 			<p title={active_plan_summary}>{active_plan_summary}</p>
-			<span class="plan-id"
-				>{household_store.profile.name} · {meal_plan_store.activePlanId}</span
-			>
+			<span class="plan-id">
+				<span class="plan-id__household">{household_store.profile.name}</span>
+				<span class="plan-id__separator" aria-hidden="true">·</span>
+				<span class="plan-id__value">{meal_plan_store.activePlanId}</span>
+			</span>
 		</div>
 		<div class="planner-context__controls">
 			<div class="field-group">
@@ -1127,8 +1129,12 @@
 
 	.plan-id {
 		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.2rem 0.35rem;
 		width: fit-content;
 		max-width: 100%;
+		min-width: 0;
 		padding: 0.35rem 0.65rem;
 		border-radius: 999px;
 		border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
@@ -1136,9 +1142,21 @@
 		font-size: 0.78rem;
 		font-weight: 700;
 		color: var(--primary);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		white-space: normal;
+	}
+
+	.plan-id__separator {
+		flex: 0 0 auto;
+	}
+
+	.plan-id__household,
+	.plan-id__value {
+		min-width: 0;
+	}
+
+	.plan-id__value {
+		overflow-wrap: anywhere;
+		word-break: break-word;
 	}
 
 	.planner-context__cta {
