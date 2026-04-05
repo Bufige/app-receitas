@@ -33,77 +33,93 @@
 
 :root {
 	// Background & surfaces
-	--bg: #fff8f2;
+	--bg: #fff7f0;
 	--surface: #fffdf9;
+	--surface-muted: #fff1e6;
+	--surface-strong: #fff6ee;
 
 	// Text
-	--text: #2d211b;
-	--text-muted: #7d6a60;
-	--placeholder: #b8a79e;
+	--text: #251815;
+	--text-muted: #6d5a51;
+	--placeholder: #b59f93;
 
 	// Borders
-	--border: #ead8cc;
+	--border: #ead6ca;
 
 	// Status
-	--success: #4ea96d;
-	--warning: #df9a3f;
-	--error: #d95a45;
-	--error-hover: #be4d3a;
+	--success: #5ea56b;
+	--warning: #d9952f;
+	--error: #d7503b;
+	--error-hover: #bf432f;
 
 	// Brand
-	--primary: #d46a3a;
-	--primary-hover: #bd5a2d;
-	--secondary: #f0b35d;
-	--secondary-hover: #da9a43;
+	--primary: #f05a28;
+	--primary-hover: #d94c1d;
+	--secondary: #ffbf47;
+	--secondary-hover: #efa92a;
+	--accent-berry: #9f3d56;
 
 	// Neutrals
 	--black: #000000;
 	--white: #ffffff;
 
 	// Shadows
-	--box-shadow: rgba(136, 81, 38, 0.16) 0px 10px 28px;
-	--high-box-shadow: rgba(106, 58, 26, 0.22) 0px 16px 40px;
-	--soft-box-shadow: rgba(126, 84, 48, 0.1) 0px 8px 20px;
+	--box-shadow: rgba(112, 61, 28, 0.14) 0px 12px 32px;
+	--high-box-shadow: rgba(89, 42, 14, 0.18) 0px 18px 45px;
+	--soft-box-shadow: rgba(112, 61, 28, 0.1) 0px 10px 30px;
+	--card-shadow-hover: rgba(89, 42, 14, 0.16) 0px 20px 44px;
+
+	// Motion
+	--motion-fast: 120ms;
+	--motion-base: 180ms;
+	--motion-slow: 240ms;
+	--motion-hero: 320ms;
+	--ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
 	// Hero background
-	--bg-overlay: linear-gradient(180deg, rgba(255, 248, 242, 0.9), rgba(255, 248, 242, 0.98));
+	--bg-overlay: linear-gradient(180deg, rgba(255, 247, 240, 0.9), rgba(255, 247, 240, 0.98));
 	--bg-offset: 90%;
-	--bg-image: radial-gradient(circle at top left, rgba(240, 179, 93, 0.24), transparent 28%), radial-gradient(circle at top right, rgba(212, 106, 58, 0.18), transparent 24%), linear-gradient(180deg, #fffaf6 0%, #fff3ea 100%);
+	--bg-image: radial-gradient(circle at top left, rgba(255, 191, 71, 0.24), transparent 30%), radial-gradient(circle at 80% 0%, rgba(240, 90, 40, 0.18), transparent 26%), radial-gradient(circle at 40% 100%, rgba(159, 61, 86, 0.08), transparent 22%), linear-gradient(180deg, #fffaf5 0%, #fff1e4 100%);
 
 	// Auth background
-	--auth-bg-image: radial-gradient(circle at top left, rgba(212, 106, 58, 0.18), transparent 26%), radial-gradient(circle at bottom right, rgba(240, 179, 93, 0.2), transparent 32%), linear-gradient(180deg, #fffaf7 0%, #fff1e5 100%);
+	--auth-bg-image: radial-gradient(circle at top left, rgba(240, 90, 40, 0.18), transparent 26%), radial-gradient(circle at bottom right, rgba(255, 191, 71, 0.2), transparent 32%), linear-gradient(180deg, #fffaf7 0%, #fff1e5 100%);
 	--auth-bg-overlay: color-mix(in srgb, var(--bg) 72%, transparent);
 	--auth-bg-offset: 90%;
 }
 
 [data-theme='dark'] {
-	--bg: #211711;
-	--surface: #2b1f18;
-	--text: #f8ede5;
-	--text-muted: #cfb8aa;
-	--placeholder: #8b7266;
-	--border: #4a3428;
-	--success: #63bc81;
-	--warning: #efba63;
-	--error: #ee7e69;
-	--error-hover: #d66b58;
-	--primary: #ff9d61;
-	--primary-hover: #f18745;
-	--secondary: #ffd27d;
-	--secondary-hover: #ecbd66;
+	--bg: #17110f;
+	--surface: #221916;
+	--surface-muted: #2c211d;
+	--surface-strong: #332722;
+	--text: #fff2e8;
+	--text-muted: #cab1a3;
+	--placeholder: #8f776b;
+	--border: #4a362d;
+	--success: #7cc587;
+	--warning: #efb24a;
+	--error: #f0715b;
+	--error-hover: #db5f48;
+	--primary: #ff7b47;
+	--primary-hover: #ff6830;
+	--secondary: #ffd166;
+	--secondary-hover: #ffc64a;
+	--accent-berry: #c46281;
 	--black: #000000;
 	--white: #ffffff;
-	--box-shadow: rgba(0, 0, 0, 0.45) 0px 10px 28px;
-	--high-box-shadow: rgba(0, 0, 0, 0.6) 0px 16px 40px;
-	--soft-box-shadow: rgba(0, 0, 0, 0.24) 0px 8px 20px;
+	--box-shadow: rgba(0, 0, 0, 0.34) 0px 12px 32px;
+	--high-box-shadow: rgba(0, 0, 0, 0.45) 0px 18px 45px;
+	--soft-box-shadow: rgba(0, 0, 0, 0.24) 0px 10px 30px;
+	--card-shadow-hover: rgba(0, 0, 0, 0.38) 0px 18px 44px;
 
 	// Hero background
-	--bg-overlay: linear-gradient(180deg, rgba(33, 23, 17, 0.9), rgba(33, 23, 17, 0.98));
+	--bg-overlay: linear-gradient(180deg, rgba(23, 17, 15, 0.9), rgba(23, 17, 15, 0.98));
 	--bg-offset: 85%;
-	--bg-image: radial-gradient(circle at top left, rgba(255, 157, 97, 0.16), transparent 28%), radial-gradient(circle at bottom right, rgba(255, 210, 125, 0.12), transparent 32%), linear-gradient(180deg, #221712 0%, #19110d 100%);
+	--bg-image: radial-gradient(circle at top left, rgba(255, 123, 71, 0.18), transparent 28%), radial-gradient(circle at bottom right, rgba(255, 209, 102, 0.14), transparent 32%), radial-gradient(circle at 40% 100%, rgba(196, 98, 129, 0.1), transparent 22%), linear-gradient(180deg, #221712 0%, #19110d 100%);
 
 	// Auth background
-	--auth-bg-image: radial-gradient(circle at top right, rgba(255, 157, 97, 0.18), transparent 24%), radial-gradient(circle at bottom left, rgba(255, 210, 125, 0.12), transparent 28%), linear-gradient(180deg, #2a1d16 0%, #1c1410 100%);
+	--auth-bg-image: radial-gradient(circle at top right, rgba(255, 123, 71, 0.18), transparent 24%), radial-gradient(circle at bottom left, rgba(255, 209, 102, 0.12), transparent 28%), linear-gradient(180deg, #2a1d16 0%, #1c1410 100%);
 	--auth-bg-overlay: color-mix(in srgb, var(--bg) 70%, transparent);
 	--auth-bg-offset: 85%;
 }
@@ -119,8 +135,8 @@
 body {
 	font-family: Plus Jakarta Sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 	background:
-		radial-gradient(circle at top left, rgba(240, 179, 93, 0.08), transparent 22%),
-		radial-gradient(circle at top right, rgba(212, 106, 58, 0.08), transparent 20%),
+		radial-gradient(circle at top left, rgba(255, 191, 71, 0.08), transparent 22%),
+		radial-gradient(circle at top right, rgba(240, 90, 40, 0.08), transparent 20%),
 		var(--bg);
 	color: var(--text);
 	line-height: 1.5;
@@ -131,6 +147,9 @@ a {
 	cursor: pointer;
 	text-decoration: none;
 	color: var(--text);
+	transition:
+		color var(--motion-base) var(--ease-standard),
+		opacity var(--motion-base) var(--ease-standard);
 }
 
 button,
@@ -139,6 +158,14 @@ textarea,
 select {
 	font: inherit;
 	color: var(--text);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+	transition-timing-function: var(--ease-standard);
 }
 
 // Focus-visible outline for keyboard navigation
@@ -234,6 +261,23 @@ select {
 	@media (min-width: 768px) {
 		padding: 1.5rem 2rem;
 	}
+}
+
+.surface-panel {
+	background-color: var(--surface);
+	border: 1px solid var(--border);
+	box-shadow: var(--soft-box-shadow);
+	border-radius: 24px;
+	transition:
+		transform var(--motion-slow) var(--ease-standard),
+		box-shadow var(--motion-slow) var(--ease-standard),
+		border-color var(--motion-base) var(--ease-standard),
+		background-color var(--motion-base) var(--ease-standard);
+}
+
+.surface-panel:hover {
+	border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+	box-shadow: var(--card-shadow-hover);
 }
 
 // Shared auth page styles

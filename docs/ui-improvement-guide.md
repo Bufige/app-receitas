@@ -76,47 +76,47 @@ The current palette is already warm, but it is a bit soft and too close in value
 
 ### Light theme
 
-| Token | Value | Purpose |
-| --- | --- | --- |
-| `--bg` | `#fff7f0` | Main page background |
-| `--surface` | `#fffdf9` | Cards and panels |
-| `--surface-muted` | `#fff1e6` | Section contrast and soft blocks |
-| `--text` | `#251815` | Main text |
-| `--text-muted` | `#6d5a51` | Secondary copy |
-| `--placeholder` | `#b59f93` | Inputs |
-| `--border` | `#ead6ca` | Borders/dividers |
-| `--primary` | `#f05a28` | Main CTA, active states |
-| `--primary-hover` | `#d94c1d` | CTA hover |
-| `--secondary` | `#ffbf47` | Pills, highlights, badges |
-| `--secondary-hover` | `#efa92a` | Secondary hover |
-| `--success` | `#5ea56b` | Success/healthy/fresh states |
-| `--warning` | `#d9952f` | Warning |
-| `--error` | `#d7503b` | Error |
-| `--accent-berry` | `#9f3d56` | Premium accent, sparse usage |
-| `--shadow-soft` | `rgba(112, 61, 28, 0.10) 0px 10px 30px` | Soft cards |
-| `--shadow-strong` | `rgba(89, 42, 14, 0.18) 0px 18px 45px` | Hero/floating surfaces |
+| Token               | Value                                   | Purpose                          |
+| ------------------- | --------------------------------------- | -------------------------------- |
+| `--bg`              | `#fff7f0`                               | Main page background             |
+| `--surface`         | `#fffdf9`                               | Cards and panels                 |
+| `--surface-muted`   | `#fff1e6`                               | Section contrast and soft blocks |
+| `--text`            | `#251815`                               | Main text                        |
+| `--text-muted`      | `#6d5a51`                               | Secondary copy                   |
+| `--placeholder`     | `#b59f93`                               | Inputs                           |
+| `--border`          | `#ead6ca`                               | Borders/dividers                 |
+| `--primary`         | `#f05a28`                               | Main CTA, active states          |
+| `--primary-hover`   | `#d94c1d`                               | CTA hover                        |
+| `--secondary`       | `#ffbf47`                               | Pills, highlights, badges        |
+| `--secondary-hover` | `#efa92a`                               | Secondary hover                  |
+| `--success`         | `#5ea56b`                               | Success/healthy/fresh states     |
+| `--warning`         | `#d9952f`                               | Warning                          |
+| `--error`           | `#d7503b`                               | Error                            |
+| `--accent-berry`    | `#9f3d56`                               | Premium accent, sparse usage     |
+| `--shadow-soft`     | `rgba(112, 61, 28, 0.10) 0px 10px 30px` | Soft cards                       |
+| `--shadow-strong`   | `rgba(89, 42, 14, 0.18) 0px 18px 45px`  | Hero/floating surfaces           |
 
 ### Dark theme
 
-| Token | Value | Purpose |
-| --- | --- | --- |
-| `--bg` | `#17110f` | Main page background |
-| `--surface` | `#221916` | Cards and panels |
-| `--surface-muted` | `#2c211d` | Section contrast |
-| `--text` | `#fff2e8` | Main text |
-| `--text-muted` | `#cab1a3` | Secondary copy |
-| `--placeholder` | `#8f776b` | Inputs |
-| `--border` | `#4a362d` | Borders/dividers |
-| `--primary` | `#ff7b47` | Main CTA |
-| `--primary-hover` | `#ff6830` | CTA hover |
-| `--secondary` | `#ffd166` | Highlights |
-| `--secondary-hover` | `#ffc64a` | Secondary hover |
-| `--success` | `#7cc587` | Success/freshness |
-| `--warning` | `#efb24a` | Warning |
-| `--error` | `#f0715b` | Error |
-| `--accent-berry` | `#c46281` | Premium accent |
-| `--shadow-soft` | `rgba(0, 0, 0, 0.24) 0px 10px 30px` | Soft cards |
-| `--shadow-strong` | `rgba(0, 0, 0, 0.45) 0px 18px 45px` | Hero/floating surfaces |
+| Token               | Value                               | Purpose                |
+| ------------------- | ----------------------------------- | ---------------------- |
+| `--bg`              | `#17110f`                           | Main page background   |
+| `--surface`         | `#221916`                           | Cards and panels       |
+| `--surface-muted`   | `#2c211d`                           | Section contrast       |
+| `--text`            | `#fff2e8`                           | Main text              |
+| `--text-muted`      | `#cab1a3`                           | Secondary copy         |
+| `--placeholder`     | `#8f776b`                           | Inputs                 |
+| `--border`          | `#4a362d`                           | Borders/dividers       |
+| `--primary`         | `#ff7b47`                           | Main CTA               |
+| `--primary-hover`   | `#ff6830`                           | CTA hover              |
+| `--secondary`       | `#ffd166`                           | Highlights             |
+| `--secondary-hover` | `#ffc64a`                           | Secondary hover        |
+| `--success`         | `#7cc587`                           | Success/freshness      |
+| `--warning`         | `#efb24a`                           | Warning                |
+| `--error`           | `#f0715b`                           | Error                  |
+| `--accent-berry`    | `#c46281`                           | Premium accent         |
+| `--shadow-soft`     | `rgba(0, 0, 0, 0.24) 0px 10px 30px` | Soft cards             |
+| `--shadow-strong`   | `rgba(0, 0, 0, 0.45) 0px 18px 45px` | Hero/floating surfaces |
 
 ## Color Usage Rules
 

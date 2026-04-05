@@ -84,17 +84,30 @@
 		gap: 0.5em;
 		width: 100%;
 		border: 1px solid transparent;
-		border-radius: 6px;
-		font-weight: 500;
+		border-radius: 999px;
+		font-weight: 600;
 		cursor: pointer;
 		transition:
-			background-color 0.2s,
-			border-color 0.2s,
-			opacity 0.2s;
+			transform var(--motion-base) var(--ease-standard),
+			background-color var(--motion-base) var(--ease-standard),
+			border-color var(--motion-base) var(--ease-standard),
+			box-shadow var(--motion-slow) var(--ease-standard),
+			opacity var(--motion-base) var(--ease-standard),
+			color var(--motion-base) var(--ease-standard);
 		white-space: nowrap;
+		box-shadow: 0 0 0 transparent;
+		text-decoration: none;
 
 		@include md {
 			width: 320px;
+		}
+
+		&:hover:not(:disabled) {
+			transform: translateY(-2px);
+		}
+
+		&:active:not(:disabled) {
+			transform: translateY(0);
 		}
 
 		&:disabled {
@@ -130,48 +143,57 @@
 	.default {
 		background-color: var(--surface);
 		border-color: var(--border);
+		box-shadow: var(--soft-box-shadow);
 
 		&:hover:not(:disabled) {
-			background-color: var(--bg);
+			background-color: var(--surface-muted);
+			box-shadow: var(--card-shadow-hover);
 		}
 	}
 
 	.primary {
 		background-color: var(--primary);
 		color: var(--surface);
+		box-shadow: var(--box-shadow);
 
 		&:hover:not(:disabled) {
 			background-color: var(--primary-hover);
+			box-shadow: var(--high-box-shadow);
 		}
 	}
 
 	.secondary {
 		background-color: var(--secondary);
-		color: var(--surface);
+		color: var(--text);
+		box-shadow: var(--soft-box-shadow);
 
 		&:hover:not(:disabled) {
 			background-color: var(--secondary-hover);
+			box-shadow: var(--box-shadow);
 		}
 	}
 
 	.danger {
 		background-color: var(--error);
 		color: var(--surface);
+		box-shadow: var(--box-shadow);
 
 		&:hover:not(:disabled) {
 			background-color: var(--error-hover);
+			box-shadow: var(--high-box-shadow);
 		}
 	}
 
 	.outline {
-		background-color: var(--white);
+		background-color: color-mix(in srgb, var(--surface) 96%, transparent);
 		border-color: var(--primary);
 		color: var(--primary);
 		font-weight: 600;
 		font-size: 0.875rem;
 
 		&:hover:not(:disabled) {
-			background-color: color-mix(in srgb, var(--primary) 8%, var(--white));
+			background-color: color-mix(in srgb, var(--primary) 10%, var(--surface));
+			box-shadow: var(--soft-box-shadow);
 		}
 	}
 
@@ -185,7 +207,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5em;
-		transition: opacity 0.2s;
+		transition: opacity var(--motion-base) var(--ease-standard);
 	}
 
 	.hidden {
