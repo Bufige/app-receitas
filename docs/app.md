@@ -544,108 +544,95 @@ If these answers are stable, the backend can later mirror the same object struct
 
 ---
 
-## Recommended Next Step
+## Implementation Status
 
-After defining this document, the next implementation step should be:
+The frontend foundation described in this document has already been implemented with mocked data and working screens for the core user flow.
 
-1. create shared TypeScript types;
-2. create mock files for recipes, meal plans, and household profile;
-3. implement a shopping list calculation helper;
-4. connect the first UI screens to the mocked data;
-5. add shopping item status handling and household default servings.
-
-That gives the project a solid frontend foundation before real API integration starts.
-
-After that, a good follow-up step is to add a user history experience in the profile area, including:
-
-1. previous meal plans;
-2. summary of generated shopping lists;
-3. frequently selected recipes;
-4. recent planning activity.
+The remaining work is now focused on future extensions rather than the original MVP foundation.
 
 ---
 
-## Frontend Todo List
+## Frontend Checklist
 
-The frontend should be implemented in this order so the foundations are ready before the UI depends on them.
+This checklist reflects the current implementation status of the frontend.
 
 ### Phase 1 — Foundation
 
-1. **Create shared TypeScript types**
+- [x] **Create shared TypeScript types**
 	- Add the base types for `Recipe`, `RecipeIngredient`, `RecipeInstruction`, `MealPlan`, `MealPlanEntry`, `RecurrenceRule`, `ShoppingListItem`, and `HouseholdProfile`.
 	- This should live under `src/lib/types/` and become the single source of truth for the frontend contract.
 
-2. **Create mock data files**
+- [x] **Create mock data files**
 	- Add `src/lib/mocks/recipes.ts`, `src/lib/mocks/meal-plans.ts`, `src/lib/mocks/household-profile.ts`, and `src/lib/mocks/shopping-list.ts`.
 	- These files should mirror the documented examples in this file.
 
-3. **Implement the shopping list calculation helper**
+- [x] **Implement the shopping list calculation helper**
 	- Build a helper that expands recurring entries, scales ingredient quantities by servings, aggregates equal ingredients, and returns `ShoppingListItem[]`.
 	- This logic should live in `src/lib/utils/` so components stay focused on presentation.
 
-4. **Implement planning preset helpers**
+- [x] **Implement planning preset helpers**
 	- Add utilities for `this_week`, `next_week`, `this_month`, and `custom_range`.
 	- These helpers should produce consistent `start_date` and `end_date` values for the meal plan.
 
 ### Phase 2 — Planning State
 
-5. **Create the household profile store**
+- [x] **Create the household profile store**
 	- Store defaults such as `default_servings` and other household planning preferences.
 	- This should live in `src/lib/stores/` using the project rune-based store pattern.
 
-6. **Create the meal planning store**
+- [x] **Create the meal planning store**
 	- Store current plan data, entries, recurrence edits, selected period, and any calendar conflict state.
 	- This state layer should be designed so one-time and recurring entries are easy to update.
 
-7. **Add recurrence expansion and series editing support**
+- [x] **Add recurrence expansion and series editing support**
 	- Support both editing a single occurrence and editing the full recurring series.
 	- Keep `series_id` handling explicit so future backend integration is straightforward.
 
-8. **Add conflict detection logic**
+- [x] **Add conflict detection logic**
 	- Warn when the same meal slot already has a recipe or when a selected time range becomes overloaded.
 	- This should happen before finalizing meal plan changes in the UI.
 
 ### Phase 3 — MVP Screens
 
-9. **Build the recipe list page**
+- [x] **Build the recipe list page**
 	- Show recipes from mocked data with search and the basic recipe card information.
 	- Keep the first version simple and optimized for quick browsing.
 
-10. **Build the recipe details page**
+- [x] **Build the recipe details page**
 	- Show ingredients, instructions, servings, timing, and tags.
 	- Include a clear call to add the recipe to the meal plan.
 
-11. **Build the meal plan builder page**
+- [x] **Build the meal plan builder page**
 	- Add calendar-based planning, meal slot assignment, servings override, recurrence creation, and recurrence editing.
 	- This is the main workflow screen and should be treated as the core experience.
 
-12. **Build the shopping list page**
+- [x] **Build the shopping list page**
 	- Show aggregated items, grouped totals, and status tracking such as `pending`, `bought`, `skipped`, and `already_available`.
 	- This page should consume the calculation helper output instead of duplicating logic.
 
-13. **Build the household profile page**
-	- Let users configure default servings and future planning preferences.
+- [x] **Build the household profile page**
+	- Let users configure default servings and household preferences relevant to the current MVP.
 	- This page should connect directly to the household profile store.
 
 ### Phase 4 — Follow-Up Features
 
-14. **Add profile history page**
+- [x] **Add profile history page**
 	- Show previous meal plans, recurring planning patterns, and past shopping summaries.
 	- This supports retention and helps users reuse successful plans.
 
-15. **Add recipe suggestion flow**
+- [ ] **Add recipe suggestion flow**
 	- Let users submit recipe ideas for administrator review.
 	- Keep it separate from the administrator-managed recipe catalog.
 
-16. **Add shared household planning**
+- [ ] **Add shared household planning**
 	- Allow multiple household members to collaborate on meal planning and shopping progress.
 	- This should come later, after the single-user flow is stable.
 
 ### Definition Of Done For MVP
 
-- A user can browse recipes from mocked data.
-- A user can open recipe details and add a recipe to a meal plan.
-- A user can create one-time and recurring meal plan entries from a calendar.
-- A user can generate an aggregated shopping list with serving-aware totals.
-- A user can mark shopping list items by status.
-- A user can configure default household servings.
+- [x] A user can browse recipes from mocked data.
+- [x] A user can open recipe details and add a recipe to a meal plan.
+- [x] A user can create one-time and recurring meal plan entries from a calendar.
+- [x] A user can generate an aggregated shopping list with serving-aware totals.
+- [x] A user can mark shopping list items by status.
+- [x] A user can configure default household servings.
