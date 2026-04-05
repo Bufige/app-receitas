@@ -3,6 +3,7 @@ import type { MealPlan } from "$lib/types/planning";
 export const mock_meal_plans: MealPlan[] = [
 	{
 		id: "meal-plan-week-001",
+		household_id: "household-home-001",
 		name: "Weekly Family Plan",
 		period: "week",
 		planning_preset: "this_week",
@@ -68,6 +69,7 @@ export const mock_meal_plans: MealPlan[] = [
 	},
 	{
 		id: "meal-plan-week-002",
+		household_id: "household-home-001",
 		name: "Next Week Reset Plan",
 		period: "week",
 		planning_preset: "next_week",
@@ -112,6 +114,7 @@ export const mock_meal_plans: MealPlan[] = [
 	},
 	{
 		id: "meal-plan-month-001",
+		household_id: "household-home-001",
 		name: "April Batch Cooking",
 		period: "month",
 		planning_preset: "this_month",
@@ -182,7 +185,8 @@ export const mock_meal_plans: MealPlan[] = [
 	},
 	{
 		id: "meal-plan-custom-001",
-		name: "Long Weekend Hosting",
+		household_id: "household-business-001",
+		name: "Weekend Service Prep",
 		period: "week",
 		planning_preset: "custom_range",
 		start_date: "2026-05-01",

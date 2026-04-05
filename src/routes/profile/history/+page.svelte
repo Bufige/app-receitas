@@ -23,12 +23,26 @@
 		return getLocale() === "pt-br" ? portuguese : english;
 	}
 
-	function get_optional_message(key: string, fallback: string): string {
-		const candidate = message_registry[key];
+	function call_optional_message<TInputs>(
+		candidate: unknown,
+		fallback: string,
+		inputs?: TInputs,
+	): string {
+		if (typeof candidate !== "function") {
+			return fallback;
+		}
 
-		return typeof candidate === "function"
-			? (candidate as () => string)()
-			: fallback;
+		try {
+			return inputs === undefined
+				? (candidate as () => string)()
+				: (candidate as (input: TInputs) => string)(inputs);
+		} catch {
+			return fallback;
+		}
+	}
+
+	function get_optional_message(key: string, fallback: string): string {
+		return call_optional_message(message_registry[key], fallback);
 	}
 
 	function history_filters_title(): string {

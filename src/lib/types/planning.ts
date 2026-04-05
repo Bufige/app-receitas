@@ -13,6 +13,7 @@ export type ShoppingItemStatus =
 	| "bought"
 	| "skipped"
 	| "already_available";
+export type HouseholdKind = "home" | "business";
 
 export type RecurrenceRule = {
 	frequency: RecurrenceFrequency;
@@ -33,6 +34,7 @@ export type MealPlanEntry = {
 
 export type MealPlan = {
 	id: string;
+	household_id: string;
 	name: string;
 	period: MealPlanPeriod;
 	planning_preset?: PlanningPreset;
@@ -58,6 +60,7 @@ export type ShoppingListItem = {
 export type HouseholdProfile = {
 	id: string;
 	name: string;
+	kind: HouseholdKind;
 	default_servings: number;
 	dietary_preferences?: string[];
 	disliked_ingredients?: string[];

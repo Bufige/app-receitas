@@ -19,7 +19,7 @@
 		RecurrenceRule,
 	} from "$lib/types/planning";
 	import * as m from "$lib/paraglide/messages.js";
-	import { localizeHref } from "$lib/paraglide/runtime";
+	import { getLocale, localizeHref } from "$lib/paraglide/runtime";
 	import type { PlanWindowValidationResult } from "$lib/utils/planning";
 	import {
 		expand_meal_plan_entries,
@@ -33,6 +33,7 @@
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
+	const message_registry = m as Record<string, unknown>;
 	const meal_types: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
 
 	let selected_recipe_id = $state(
@@ -54,6 +55,109 @@
 	let last_active_plan_id = $state(meal_plan_store.activePlanId);
 	let active_tab = $state<PlannerTab>("setup");
 	let planner_feedback = $state<string | null>(null);
+
+	function localized_fallback(english: string, portuguese: string): string {
+		return getLocale() === "pt-br" ? portuguese : english;
+	}
+
+	function call_optional_message<TInputs>(
+		candidate: unknown,
+		fallback: string,
+		inputs?: TInputs,
+	): string {
+		if (typeof candidate !== "function") {
+			return fallback;
+		}
+
+		try {
+			return inputs === undefined
+				? (candidate as () => string)()
+				: (candidate as (input: TInputs) => string)(inputs);
+		} catch {
+			return fallback;
+		}
+	}
+
+	function get_optional_message(key: string, fallback: string): string {
+		return call_optional_message(message_registry[key], fallback);
+	}
+
+	function planner_entry_outside_range_error_message(): string {
+		return get_optional_message(
+			"planner_entry_outside_range_error",
+			localized_fallback(
+				"Choose a date inside the active plan range before saving this meal.",
+				"Escolha uma data dentro do intervalo ativo do plano antes de salvar esta refeição.",
+			),
+		);
+	}
+
+	function planner_recurrence_needs_limit_error_message(): string {
+		return get_optional_message(
+			"planner_recurrence_needs_limit_error",
+			localized_fallback(
+				"Recurring meals need an end date or occurrence limit that stays inside the active plan range.",
+				"Refeições recorrentes precisam de uma data final ou limite de ocorrências dentro do intervalo ativo do plano.",
+			),
+		);
+	}
+
+	function planner_recurrence_outside_range_error_message(): string {
+		return get_optional_message(
+			"planner_recurrence_outside_range_error",
+			localized_fallback(
+				"This recurring meal extends beyond the active plan range. Adjust the date or recurrence limit.",
+				"Esta refeição recorrente ultrapassa o intervalo ativo do plano. Ajuste a data ou o limite da recorrência.",
+			),
+		);
+	}
+
+	function planner_range_pruned_message(count: number): string {
+		const fallback = localized_fallback(
+			`Removed ${count} meal entries that no longer fit this plan range.`,
+			`${count} refeições foram removidas por não caberem mais neste intervalo do plano.`,
+		);
+
+		return call_optional_message(
+			message_registry.planner_range_pruned,
+			fallback,
+			{
+				count: `${count}`,
+			},
+		);
+	}
+
+	function planner_range_rule_hint_message(range: string): string {
+		const fallback = localized_fallback(
+			`Meals must stay within ${range}. Recurring meals also need an end date or occurrence limit inside this range.`,
+			`As refeições precisam ficar dentro de ${range}. Refeições recorrentes também precisam de uma data final ou limite de ocorrências dentro desse intervalo.`,
+		);
+
+		return call_optional_message(
+			message_registry.planner_range_rule_hint,
+			fallback,
+			{
+				range,
+			},
+		);
+	}
+
+	function planner_household_label(): string {
+		return get_optional_message(
+			"planner_household_label",
+			localized_fallback("Household", "Casa"),
+		);
+	}
+
+	function planner_household_hint(): string {
+		return get_optional_message(
+			"planner_household_hint",
+			localized_fallback(
+				"Plans are filtered by the selected household.",
+				"Os planos são filtrados pela casa selecionada.",
+			),
+		);
+	}
 
 	const planner_tabs = [
 		{
@@ -78,6 +182,7 @@
 		},
 	];
 
+	const available_households = $derived(household_store.profiles);
 	const available_plans = $derived(meal_plan_store.mealPlans);
 	const entries = $derived(meal_plan_store.mealPlan.entries);
 	const conflicts = $derived(meal_plan_store.conflicts);
@@ -236,11 +341,11 @@
 	): string {
 		switch (reason) {
 			case "date-outside-range":
-				return m.planner_entry_outside_range_error();
+				return planner_entry_outside_range_error_message();
 			case "recurrence-open-ended":
-				return m.planner_recurrence_needs_limit_error();
+				return planner_recurrence_needs_limit_error_message();
 			case "recurrence-outside-range":
-				return m.planner_recurrence_outside_range_error();
+				return planner_recurrence_outside_range_error_message();
 		}
 	}
 
@@ -319,7 +424,7 @@
 
 		if (result.removedEntries > 0) {
 			show_planner_feedback(
-				m.planner_range_pruned({ count: `${result.removedEntries}` }),
+				planner_range_pruned_message(result.removedEntries),
 			);
 		} else {
 			clear_planner_feedback();
@@ -417,7 +522,7 @@
 
 		if (result.removedEntries > 0) {
 			show_planner_feedback(
-				m.planner_range_pruned({ count: `${result.removedEntries}` }),
+				planner_range_pruned_message(result.removedEntries),
 			);
 		} else {
 			clear_planner_feedback();
@@ -428,6 +533,15 @@
 		meal_plan_store.selectPlan(
 			(event.currentTarget as HTMLSelectElement).value,
 		);
+	}
+
+	function select_household(event: Event) {
+		household_store.selectHousehold(
+			(event.currentTarget as HTMLSelectElement).value,
+		);
+		active_tab = "setup";
+		clear_planner_feedback();
+		reset_form();
 	}
 
 	function create_plan() {
@@ -458,9 +572,24 @@
 				{meal_plan_store.mealPlan.name}
 			</h2>
 			<p title={active_plan_summary}>{active_plan_summary}</p>
-			<span class="plan-id">{meal_plan_store.activePlanId}</span>
+			<span class="plan-id"
+				>{household_store.profile.name} · {meal_plan_store.activePlanId}</span
+			>
 		</div>
 		<div class="planner-context__controls">
+			<div class="field-group">
+				<label for="active-household">{planner_household_label()}</label>
+				<select
+					id="active-household"
+					value={household_store.activeHouseholdId}
+					onchange={select_household}
+				>
+					{#each available_households as household}
+						<option value={household.id}>{household.name}</option>
+					{/each}
+				</select>
+				<p class="field-note">{planner_household_hint()}</p>
+			</div>
 			<div class="field-group">
 				<label for="active-plan">{m.planner_active_plan_label()}</label>
 				<select
@@ -658,7 +787,7 @@
 				</div>
 
 				<p class="field-note">
-					{m.planner_range_rule_hint({ range: plan_range_label })}
+					{planner_range_rule_hint_message(plan_range_label)}
 				</p>
 
 				<div class="split-grid">
