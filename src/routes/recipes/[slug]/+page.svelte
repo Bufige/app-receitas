@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { page } from "$app/state";
+	import Button from "$lib/components/ui/Button/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import { get_recipe_by_slug } from "$lib/mocks/recipes";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import { get_recipe_tag_label } from "$lib/utils/recipe-tags";
 
 	const recipe = $derived(
 		page.params.slug ? get_recipe_by_slug(page.params.slug) : undefined,
@@ -28,12 +30,15 @@
 					<p>{recipe.description}</p>
 				{/if}
 			</div>
-			<a
+			<Button
 				class="planner-link"
+				variant="primary"
+				size="medium"
+				round
 				href={localizeHref(`/planner?recipe=${recipe.id}`)}
 			>
 				{m.recipe_detail_add_to_plan()}
-			</a>
+			</Button>
 		</header>
 
 		{#if recipe.image_url}
@@ -52,7 +57,7 @@
 		{#if recipe.tags?.length}
 			<div class="tags">
 				{#each recipe.tags as tag}
-					<span>{tag}</span>
+					<span>{get_recipe_tag_label(tag, m)}</span>
 				{/each}
 			</div>
 		{/if}
@@ -105,7 +110,6 @@
 	}
 
 	.back-link,
-	.planner-link,
 	.empty-state a {
 		color: var(--primary);
 		font-weight: 600;
@@ -128,7 +132,7 @@
 		@include md {
 			flex-direction: row;
 			justify-content: space-between;
-			align-items: flex-start;
+			align-items: center;
 		}
 
 		h1 {
@@ -139,6 +143,15 @@
 		p {
 			color: var(--text-muted);
 			max-width: 40rem;
+		}
+
+		:global(.btn) {
+			width: 100%;
+
+			@include md {
+				width: auto;
+				min-width: 11rem;
+			}
 		}
 	}
 

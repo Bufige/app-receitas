@@ -20,6 +20,7 @@
 	@use "$lib/assets/styles/breakpoints" as *;
 
 	.footer {
+		background-color: var(--bg);
 		border-top: 1px solid var(--border);
 		padding: 1rem;
 

@@ -1,10 +1,12 @@
 <script lang="ts">
 	import magnify from "@iconify-icons/mdi/magnify";
+	import Button from "$lib/components/ui/Button/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import Input from "$lib/components/ui/Input/index.svelte";
 	import { mock_recipes } from "$lib/mocks/recipes";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import { get_recipe_tag_label } from "$lib/utils/recipe-tags";
 
 	let search = $state("");
 
@@ -19,7 +21,10 @@
 			const haystack = [
 				recipe.name,
 				recipe.description ?? "",
-				...(recipe.tags ?? []),
+				...(recipe.tags ?? []).flatMap((tag) => [
+					tag,
+					get_recipe_tag_label(tag, m),
+				]),
 			]
 				.join(" ")
 				.toLowerCase();
@@ -82,18 +87,28 @@
 						{#if recipe.tags?.length}
 							<div class="tags">
 								{#each recipe.tags as tag}
-									<span>{tag}</span>
+									<span>{get_recipe_tag_label(tag, m)}</span>
 								{/each}
 							</div>
 						{/if}
 
 						<div class="actions">
-							<a href={localizeHref(`/recipes/${recipe.slug}`)}>
+							<Button
+								variant="outline"
+								size="small"
+								round
+								href={localizeHref(`/recipes/${recipe.slug}`)}
+							>
 								{m.recipes_view_details()}
-							</a>
-							<a href={localizeHref(`/planner?recipe=${recipe.id}`)}>
+							</Button>
+							<Button
+								variant="primary"
+								size="small"
+								round
+								href={localizeHref(`/planner?recipe=${recipe.id}`)}
+							>
 								{m.recipes_add_to_plan()}
-							</a>
+							</Button>
 						</div>
 					</div>
 				</article>
@@ -217,9 +232,13 @@
 		flex-wrap: wrap;
 		gap: 1rem;
 
-		a {
-			font-weight: 600;
-			color: var(--primary);
+		:global(.btn) {
+			width: auto;
+			min-width: 9.5rem;
+
+			@include md {
+				width: auto;
+			}
 		}
 	}
 

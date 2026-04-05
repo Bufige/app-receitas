@@ -16,6 +16,8 @@
 		round?: boolean;
 		loading?: boolean;
 		disabled?: boolean;
+		href?: string;
+		class?: string;
 		onclick?: () => void;
 		children?: Snippet;
 	}
@@ -26,28 +28,50 @@
 		round = false,
 		loading = false,
 		disabled = false,
+		href,
+		class: className = "",
 		onclick,
 		children,
 	}: ButtonProps = $props();
 </script>
 
-<button
-	class="btn {variant} {size}"
-	class:round
-	disabled={disabled || loading}
-	{onclick}
->
-	{#if loading}
-		<span class="spinner">
-			<Icon icon="svg-spinners:ring-resize" width="1em" height="1em" />
-		</span>
-	{/if}
-	<span class="content" class:hidden={loading}>
-		{#if children}
-			{@render children()}
+{#if href}
+	<a
+		class={`btn ${variant} ${size} ${className}`}
+		class:round
+		{href}
+		aria-disabled={disabled || loading}
+	>
+		{#if loading}
+			<span class="spinner">
+				<Icon icon="svg-spinners:ring-resize" width="1em" height="1em" />
+			</span>
 		{/if}
-	</span>
-</button>
+		<span class="content" class:hidden={loading}>
+			{#if children}
+				{@render children()}
+			{/if}
+		</span>
+	</a>
+{:else}
+	<button
+		class={`btn ${variant} ${size} ${className}`}
+		class:round
+		disabled={disabled || loading}
+		{onclick}
+	>
+		{#if loading}
+			<span class="spinner">
+				<Icon icon="svg-spinners:ring-resize" width="1em" height="1em" />
+			</span>
+		{/if}
+		<span class="content" class:hidden={loading}>
+			{#if children}
+				{@render children()}
+			{/if}
+		</span>
+	</button>
+{/if}
 
 <style lang="scss">
 	@use "$lib/assets/styles/breakpoints" as *;

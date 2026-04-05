@@ -25,12 +25,14 @@
 <a class="skip-link" href="#main-content">{m.a11y_skip_to_content()}</a>
 
 <div class="app">
-	<Header />
-	<main id="main-content" class="container">
-		<QueryClientProvider client={queryClient}>
-			{@render children()}
-		</QueryClientProvider>
-	</main>
+	<div class="app-shell">
+		<Header />
+		<main id="main-content" class="container">
+			<QueryClientProvider client={queryClient}>
+				{@render children()}
+			</QueryClientProvider>
+		</main>
+	</div>
 	<Footer />
 </div>
 
@@ -56,6 +58,11 @@
 	}
 
 	.app {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.app-shell {
 		display: flex;
 		flex-direction: column;
 		min-height: 100dvh;
