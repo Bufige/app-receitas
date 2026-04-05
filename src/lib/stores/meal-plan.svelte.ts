@@ -181,8 +181,30 @@ function build_entry_id(): string {
 	return crypto.randomUUID();
 }
 
+function build_plan_id(): string {
+	return `meal-plan-${crypto.randomUUID()}`;
+}
+
+function build_plan_name(plans: MealPlan[]): string {
+	return `Plan ${plans.length + 1}`;
+}
+
 function build_series_id(): string {
 	return `series-${crypto.randomUUID()}`;
+}
+
+function build_empty_plan(plans: MealPlan[]): MealPlan {
+	const range = get_preset_range("this_week");
+
+	return {
+		id: build_plan_id(),
+		name: build_plan_name(plans),
+		period: "week",
+		planning_preset: "this_week",
+		start_date: range.start_date,
+		end_date: range.end_date,
+		entries: [],
+	};
 }
 
 function build_status_key(plan_id: string, ingredient_id: string): string {
@@ -242,6 +264,12 @@ export function useMealPlanStore() {
 			}
 
 			active_plan_id = plan_id;
+			persist_plans();
+		},
+		createPlan() {
+			const next_plan = build_empty_plan(meal_plans);
+			meal_plans = [next_plan, ...meal_plans];
+			active_plan_id = next_plan.id;
 			persist_plans();
 		},
 		setPeriod(period: MealPlan["period"]) {
@@ -337,6 +365,19 @@ export function useMealPlanStore() {
 				...shopping_item_statuses,
 				[build_status_key(current_plan.id, ingredient_id)]: status,
 			};
+			persist_statuses();
+		},
+		clearPlan() {
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
+			meal_plans = meal_plans.map((plan) =>
+				plan.id === current_plan.id ? { ...plan, entries: [] } : plan,
+			);
+			shopping_item_statuses = Object.fromEntries(
+				Object.entries(shopping_item_statuses).filter(
+					([key]) => !key.startsWith(`${current_plan.id}:`),
+				),
+			) as Record<string, ShoppingItemStatus>;
+			persist_plans();
 			persist_statuses();
 		},
 		reset() {

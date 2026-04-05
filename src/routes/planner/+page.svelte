@@ -63,6 +63,10 @@
 	const plan_range_label = $derived.by(() =>
 		format_plan_range_label(meal_plan_store.mealPlan),
 	);
+	const active_plan_summary = $derived.by(
+		() =>
+			`${plan_range_label} · ${entries.length} ${m.planner_overview_occurrences().toLowerCase()}`,
+	);
 	const preview_days = $derived.by(() => {
 		const grouped = new Map<
 			string,
@@ -262,6 +266,15 @@
 			(event.currentTarget as HTMLSelectElement).value,
 		);
 	}
+
+	function create_plan() {
+		meal_plan_store.createPlan();
+	}
+
+	function clear_current_plan() {
+		meal_plan_store.clearPlan();
+		reset_form();
+	}
 </script>
 
 <SEO title={m.seo_planner_title()} description={m.seo_planner_description()} />
@@ -329,8 +342,26 @@
 					<p>{m.planner_settings_subtitle()}</p>
 				</div>
 
+				<div class="setup-callout">
+					<div class="setup-callout__copy">
+						<p class="eyebrow">{m.planner_active_plan_label()}</p>
+						<strong title={meal_plan_store.mealPlan.name}
+							>{meal_plan_store.mealPlan.name}</strong
+						>
+						<span title={active_plan_summary}>{active_plan_summary}</span>
+					</div>
+					<div class="setup-callout__action">
+						<Button variant="primary" size="medium" round onclick={create_plan}>
+							{m.planner_create_plan()}
+						</Button>
+					</div>
+					<p class="field-note setup-callout__hint">
+						{m.planner_create_plan_hint()}
+					</p>
+				</div>
+
 				<div class="field-group">
-					<label for="active-plan">{m.planner_plan_name_label()}</label>
+					<label for="active-plan">{m.planner_active_plan_label()}</label>
 					<select
 						id="active-plan"
 						value={meal_plan_store.activePlanId}
@@ -342,9 +373,7 @@
 							>
 						{/each}
 					</select>
-					<p class="field-note">
-						{format_plan_range_label(meal_plan_store.mealPlan)}
-					</p>
+					<p class="field-note">{active_plan_summary}</p>
 				</div>
 
 				<div class="field-group">
@@ -559,8 +588,7 @@
 						variant="danger"
 						size="medium"
 						round
-						onclick={() => meal_plan_store.reset()}
-						>{m.planner_clear_plan()}</Button
+						onclick={clear_current_plan}>{m.planner_clear_plan()}</Button
 					>
 				</div>
 			</section>
@@ -800,6 +828,54 @@
 	.entries-panel {
 		display: grid;
 		gap: 1rem;
+	}
+
+	.setup-callout {
+		display: grid;
+		gap: 0.85rem;
+		padding: 1rem;
+		border-radius: 22px;
+		border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+		background: linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--primary) 10%, var(--surface)) 0%,
+			color-mix(in srgb, var(--surface-muted) 88%, var(--surface)) 100%
+		);
+		box-shadow: var(--shadow-soft);
+	}
+
+	.setup-callout__copy {
+		display: grid;
+		gap: 0.25rem;
+		min-width: 0;
+
+		strong,
+		span {
+			display: block;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		strong {
+			font-size: 1.05rem;
+			line-height: 1.1;
+		}
+
+		span {
+			color: var(--text-muted);
+			font-size: 0.9rem;
+		}
+	}
+
+	.setup-callout__action {
+		width: 100%;
+		max-width: 100%;
+	}
+
+	.setup-callout__hint {
+		margin: 0;
 	}
 
 	.split-grid {
