@@ -146,6 +146,9 @@ export function useMealPlanStore() {
 				shopping_item_statuses,
 			);
 		},
+		get shoppingItemStatuses() {
+			return shopping_item_statuses;
+		},
 		setPeriod(period: MealPlan["period"]) {
 			update_plan({ period });
 		},

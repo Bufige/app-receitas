@@ -115,6 +115,62 @@
 
 <footer class="footer">
 	<div class="content">
+		<div class="locale-picker">
+			<button
+				bind:this={triggerRef}
+				class="locale-trigger"
+				onclick={() => (locale_open ? closeDropdown() : openDropdown())}
+				onkeydown={handleTriggerKeydown}
+				aria-label={m.a11y_select_language()}
+				aria-expanded={locale_open}
+				aria-haspopup="listbox"
+			>
+				<Icon
+					icon={localeMap[getLocale()]?.flag ?? "circle-flags:us"}
+					width="16"
+					height="16"
+				/>
+				<span class="locale-label">{localeMap[getLocale()]?.label ?? "EN"}</span
+				>
+				<span class="locale-chevron" aria-hidden="true">
+					<Icon icon={chevronDown} width="14" height="14" />
+				</span>
+			</button>
+			{#if locale_open}
+				<ul
+					class="locale-dropdown"
+					role="listbox"
+					aria-label={m.a11y_select_language()}
+					onkeydown={handleDropdownKeydown}
+				>
+					{#each locales as locale, i}
+						<li
+							role="option"
+							aria-selected={locale === getLocale()}
+							class="locale-option"
+							class:active={locale === getLocale()}
+							class:focused={i === activeIndex}
+							onclick={() => selectLocale(locale)}
+							onkeydown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									selectLocale(locale);
+								}
+							}}
+							tabindex={i === activeIndex ? 0 : -1}
+						>
+							<Icon
+								icon={localeMap[locale]?.flag ?? locale}
+								width="18"
+								height="18"
+							/>
+							<span>{localeMap[locale]?.label ?? locale.toUpperCase()}</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+
 		<p class="rights">{m.footer_rights()}</p>
 		<div class="meta-row">
 			<nav class="links">
@@ -124,63 +180,6 @@
 					>{m.footer_terms_of_service()}</a
 				>
 			</nav>
-
-			<div class="locale-picker">
-				<button
-					bind:this={triggerRef}
-					class="locale-trigger"
-					onclick={() => (locale_open ? closeDropdown() : openDropdown())}
-					onkeydown={handleTriggerKeydown}
-					aria-label={m.a11y_select_language()}
-					aria-expanded={locale_open}
-					aria-haspopup="listbox"
-				>
-					<Icon
-						icon={localeMap[getLocale()]?.flag ?? "circle-flags:us"}
-						width="16"
-						height="16"
-					/>
-					<span class="locale-label"
-						>{localeMap[getLocale()]?.label ?? "EN"}</span
-					>
-					<span class="locale-chevron" aria-hidden="true">
-						<Icon icon={chevronDown} width="14" height="14" />
-					</span>
-				</button>
-				{#if locale_open}
-					<ul
-						class="locale-dropdown"
-						role="listbox"
-						aria-label={m.a11y_select_language()}
-						onkeydown={handleDropdownKeydown}
-					>
-						{#each locales as locale, i}
-							<li
-								role="option"
-								aria-selected={locale === getLocale()}
-								class="locale-option"
-								class:active={locale === getLocale()}
-								class:focused={i === activeIndex}
-								onclick={() => selectLocale(locale)}
-								onkeydown={(e) => {
-									if (e.key === "Enter" || e.key === " ") {
-										e.preventDefault();
-										selectLocale(locale);
-									}
-								}}
-								tabindex={i === activeIndex ? 0 : -1}
-							>
-								<Icon
-									icon={localeMap[locale]?.flag ?? locale}
-									width="18"
-									height="18"
-								/>
-								<span>{localeMap[locale]?.label ?? locale.toUpperCase()}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</div>
 		</div>
 	</div>
 </footer>

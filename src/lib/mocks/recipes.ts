@@ -42,6 +42,53 @@ export const mock_recipes: Recipe[] = [
 		],
 	},
 	{
+		id: "recipe-sheet-pan-salmon",
+		slug: "sheet-pan-salmon",
+		name: "Sheet Pan Salmon",
+		description: "Oven-roasted salmon with potatoes, asparagus, and lemon.",
+		image_url:
+			"https://images.pexels.com/photos/32962795/pexels-photo-32962795.jpeg?auto=compress&cs=tinysrgb&w=1200",
+		servings: 4,
+		preparation_time_in_minutes: 35,
+		tags: ["dinner", "quick", "balanced"],
+		ingredients: [
+			{
+				id: "ingredient-salmon-fillet",
+				name: "Salmon fillet",
+				quantity: 600,
+				unit: "g",
+				category: "seafood",
+			},
+			{
+				id: "ingredient-asparagus",
+				name: "Asparagus",
+				quantity: 1,
+				unit: "unit",
+				category: "vegetables",
+			},
+			{
+				id: "ingredient-baby-potatoes",
+				name: "Baby potatoes",
+				quantity: 700,
+				unit: "g",
+				category: "vegetables",
+			},
+			{
+				id: "ingredient-lemon",
+				name: "Lemon",
+				quantity: 2,
+				unit: "unit",
+				category: "fruit",
+			},
+		],
+		instructions: [
+			{ step: 1, description: "Heat the oven and season the salmon." },
+			{ step: 2, description: "Roast the potatoes until nearly tender." },
+			{ step: 3, description: "Add salmon, asparagus, and lemon to the tray." },
+			{ step: 4, description: "Bake until the salmon is flaky and serve." },
+		],
+	},
+	{
 		id: "recipe-chicken-rice-bowl",
 		slug: "chicken-rice-bowl",
 		name: "Chicken Rice Bowl",
@@ -81,6 +128,55 @@ export const mock_recipes: Recipe[] = [
 		],
 	},
 	{
+		id: "recipe-chickpea-salad",
+		slug: "chickpea-salad",
+		name: "Mediterranean Chickpea Salad",
+		description: "A fresh salad with chickpeas, cucumber, tomato, and feta.",
+		image_url:
+			"https://images.pexels.com/photos/257816/pexels-photo-257816.jpeg?auto=compress&cs=tinysrgb&w=1200",
+		servings: 3,
+		preparation_time_in_minutes: 20,
+		tags: ["lunch", "quick", "balanced"],
+		ingredients: [
+			{
+				id: "ingredient-chickpeas",
+				name: "Chickpeas",
+				quantity: 400,
+				unit: "g",
+				category: "canned",
+			},
+			{
+				id: "ingredient-cucumber",
+				name: "Cucumber",
+				quantity: 1,
+				unit: "unit",
+				category: "vegetables",
+			},
+			{
+				id: "ingredient-cherry-tomatoes",
+				name: "Cherry tomatoes",
+				quantity: 250,
+				unit: "g",
+				category: "vegetables",
+			},
+			{
+				id: "ingredient-feta",
+				name: "Feta cheese",
+				quantity: 150,
+				unit: "g",
+				category: "dairy",
+			},
+		],
+		instructions: [
+			{ step: 1, description: "Drain the chickpeas and rinse well." },
+			{ step: 2, description: "Dice the cucumber and halve the tomatoes." },
+			{
+				step: 3,
+				description: "Toss everything together with the feta and serve.",
+			},
+		],
+	},
+	{
 		id: "recipe-vegetable-soup",
 		slug: "vegetable-soup",
 		name: "Vegetable Soup",
@@ -117,6 +213,51 @@ export const mock_recipes: Recipe[] = [
 			{ step: 1, description: "Chop the vegetables into small pieces." },
 			{ step: 2, description: "Bring the broth to a boil." },
 			{ step: 3, description: "Add vegetables and simmer until soft." },
+		],
+	},
+	{
+		id: "recipe-berry-yogurt-parfait",
+		slug: "berry-yogurt-parfait",
+		name: "Berry Yogurt Parfait",
+		description: "Layered yogurt, berries, and granola for a quick breakfast.",
+		image_url:
+			"https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?auto=compress&cs=tinysrgb&w=1200",
+		servings: 2,
+		preparation_time_in_minutes: 10,
+		tags: ["breakfast", "quick", "family"],
+		ingredients: [
+			{
+				id: "ingredient-greek-yogurt",
+				name: "Greek yogurt",
+				quantity: 400,
+				unit: "g",
+				category: "dairy",
+			},
+			{
+				id: "ingredient-mixed-berries",
+				name: "Mixed berries",
+				quantity: 250,
+				unit: "g",
+				category: "fruit",
+			},
+			{
+				id: "ingredient-granola",
+				name: "Granola",
+				quantity: 150,
+				unit: "g",
+				category: "bakery",
+			},
+		],
+		instructions: [
+			{ step: 1, description: "Spoon yogurt into glasses or bowls." },
+			{
+				step: 2,
+				description: "Add berries and granola in alternating layers.",
+			},
+			{
+				step: 3,
+				description: "Serve immediately while the granola stays crisp.",
+			},
 		],
 	},
 ];
