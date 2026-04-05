@@ -158,15 +158,21 @@
 		gap: 0.25rem;
 		padding: 0.85rem 1rem;
 		border-radius: 16px;
+		border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
 		background: linear-gradient(
 			135deg,
-			color-mix(in srgb, var(--primary) 18%, white),
-			color-mix(in srgb, var(--secondary) 18%, white)
+			color-mix(in srgb, var(--primary) 16%, var(--surface-strong)),
+			color-mix(in srgb, var(--secondary) 14%, var(--surface-muted))
 		);
+		box-shadow: inset 0 1px 0 color-mix(in srgb, var(--white) 6%, transparent);
 
 		span {
 			font-size: 0.8125rem;
 			color: var(--text-muted);
+		}
+
+		strong {
+			color: var(--text);
 		}
 	}
 

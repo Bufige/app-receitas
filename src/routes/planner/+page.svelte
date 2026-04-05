@@ -67,14 +67,14 @@
 			icon: silverwareForkKnife,
 		},
 		{
-			id: "overview" as const,
-			label: () => m.planner_schedule_preview_title(),
-			icon: calendarMonthOutline,
-		},
-		{
 			id: "entries" as const,
 			label: () => m.planner_entries_title(),
 			icon: formatListBulleted,
+		},
+		{
+			id: "overview" as const,
+			label: () => m.planner_schedule_preview_title(),
+			icon: calendarMonthOutline,
 		},
 	];
 

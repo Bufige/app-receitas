@@ -1,21 +1,181 @@
 <script lang="ts">
+	import Button from "$lib/components/ui/Button/index.svelte";
 	import ProfileTabs from "$lib/components/ui/ProfileTabs/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import * as m from "$lib/paraglide/messages.js";
-	import { localizeHref } from "$lib/paraglide/runtime";
+	import { getLocale, localizeHref } from "$lib/paraglide/runtime";
 	import {
+		build_history_recent_activity,
+		build_history_top_recipe_names,
 		build_plan_history_summaries,
-		mock_plan_history,
+		type PlanHistoryRange,
 	} from "$lib/utils/history";
+	import { format_plan_selection_label } from "$lib/utils/planning";
 
 	const meal_plan_store = useMealPlanStore();
-	const current_plan_summary = $derived(
-		build_plan_history_summaries([meal_plan_store.mealPlan])[0],
+	const message_registry = m as Record<string, unknown>;
+	let selected_plan_id = $state("all");
+	let filter_start_date = $state("");
+	let filter_end_date = $state("");
+
+	function localized_fallback(english: string, portuguese: string): string {
+		return getLocale() === "pt-br" ? portuguese : english;
+	}
+
+	function get_optional_message(key: string, fallback: string): string {
+		const candidate = message_registry[key];
+
+		return typeof candidate === "function"
+			? (candidate as () => string)()
+			: fallback;
+	}
+
+	function history_filters_title(): string {
+		return get_optional_message(
+			"profile_history_filters_title",
+			localized_fallback("History filters", "Filtros do histórico"),
+		);
+	}
+
+	function history_plan_filter_label(): string {
+		return get_optional_message(
+			"profile_history_plan_filter_label",
+			localized_fallback("Plan", "Plano"),
+		);
+	}
+
+	function history_all_plans(): string {
+		return get_optional_message(
+			"profile_history_all_plans",
+			localized_fallback("All plans", "Todos os planos"),
+		);
+	}
+
+	function history_clear_filters(): string {
+		return get_optional_message(
+			"profile_history_clear_filters",
+			localized_fallback("Show all history", "Mostrar todo o histórico"),
+		);
+	}
+
+	function history_filtered_snapshot(): string {
+		return get_optional_message(
+			"profile_history_filtered_snapshot",
+			localized_fallback("Filtered snapshot", "Resumo filtrado"),
+		);
+	}
+
+	function history_plan_snapshot(): string {
+		return get_optional_message(
+			"profile_history_plan_snapshot",
+			localized_fallback("Plan snapshot", "Resumo do plano"),
+		);
+	}
+
+	function history_matching_plans(): string {
+		return get_optional_message(
+			"profile_history_matching_plans",
+			localized_fallback("Matching plans", "Planos encontrados"),
+		);
+	}
+
+	function history_empty(): string {
+		return get_optional_message(
+			"profile_history_empty",
+			localized_fallback(
+				"No planning history matches this filter yet.",
+				"Nenhum histórico de planejamento corresponde a este filtro ainda.",
+			),
+		);
+	}
+
+	const available_plans = $derived(meal_plan_store.mealPlans);
+	const selected_plans = $derived.by(() =>
+		selected_plan_id === "all"
+			? available_plans
+			: available_plans.filter((plan) => plan.id === selected_plan_id),
 	);
-	const previous_plans = mock_plan_history.slice(1);
+	const active_range = $derived.by((): PlanHistoryRange | undefined => {
+		const start_date = filter_start_date || undefined;
+		const end_date = filter_end_date || undefined;
+
+		if (!start_date && !end_date) {
+			return undefined;
+		}
+
+		if (start_date && end_date && start_date > end_date) {
+			return {
+				start_date: end_date,
+				end_date: start_date,
+			};
+		}
+
+		return { start_date, end_date };
+	});
+	const has_active_filters = $derived.by(
+		() =>
+			selected_plan_id !== "all" ||
+			Boolean(filter_start_date) ||
+			Boolean(filter_end_date),
+	);
+	const filtered_plan_summaries = $derived.by(() => {
+		const summaries = build_plan_history_summaries(
+			selected_plans,
+			active_range,
+		);
+
+		if (!active_range || selected_plan_id !== "all") {
+			return summaries;
+		}
+
+		return summaries.filter(
+			(plan) =>
+				plan.total_occurrences > 0 ||
+				plan.shopping_item_count > 0 ||
+				plan.recurring_series_count > 0,
+		);
+	});
+	const history_activity = $derived.by(() =>
+		build_history_recent_activity(selected_plans, active_range),
+	);
+	const history_top_recipe_names = $derived.by(() =>
+		build_history_top_recipe_names(selected_plans, active_range),
+	);
+	const focused_plan_summary = $derived.by(() =>
+		selected_plan_id === "all" ? null : (filtered_plan_summaries[0] ?? null),
+	);
+	const snapshot_range = $derived.by(() => {
+		if (focused_plan_summary) {
+			return {
+				start: focused_plan_summary.start_date ?? "-",
+				end: focused_plan_summary.end_date ?? "-",
+			};
+		}
+
+		if (active_range?.start_date || active_range?.end_date) {
+			return {
+				start: active_range?.start_date ?? "-",
+				end: active_range?.end_date ?? "-",
+			};
+		}
+
+		const start_dates = filtered_plan_summaries
+			.map((plan) => plan.start_date)
+			.filter((value): value is string => Boolean(value))
+			.sort((first, second) => first.localeCompare(second));
+		const end_dates = filtered_plan_summaries
+			.map((plan) => plan.end_date)
+			.filter((value): value is string => Boolean(value))
+			.sort((first, second) => second.localeCompare(first));
+
+		return {
+			start: start_dates[0] ?? "-",
+			end: end_dates[0] ?? "-",
+		};
+	});
 	const totals = $derived.by(() => {
-		const plans = [current_plan_summary, ...previous_plans];
+		const plans = filtered_plan_summaries;
 		return {
 			total_plans: plans.length,
 			total_occurrences: plans.reduce(
@@ -32,6 +192,12 @@
 			),
 		};
 	});
+
+	function clear_filters() {
+		selected_plan_id = "all";
+		filter_start_date = "";
+		filter_end_date = "";
+	}
 </script>
 
 <SEO
@@ -51,6 +217,43 @@
 	</header>
 
 	<ProfileTabs />
+
+	<section class="panel filters-panel">
+		<div class="panel-header">
+			<h2>{history_filters_title()}</h2>
+			{#if has_active_filters}
+				<Button variant="outline" size="small" round onclick={clear_filters}>
+					{history_clear_filters()}
+				</Button>
+			{/if}
+		</div>
+
+		<div class="filter-grid">
+			<div class="field-group">
+				<label for="history-plan-filter">{history_plan_filter_label()}</label>
+				<select id="history-plan-filter" bind:value={selected_plan_id}>
+					<option value="all">{history_all_plans()}</option>
+					{#each available_plans as plan}
+						<option value={plan.id}>{format_plan_selection_label(plan)}</option>
+					{/each}
+				</select>
+			</div>
+
+			<div class="field-group">
+				<label for="history-start-date">{m.planner_custom_start_label()}</label>
+				<input
+					id="history-start-date"
+					type="date"
+					bind:value={filter_start_date}
+				/>
+			</div>
+
+			<div class="field-group">
+				<label for="history-end-date">{m.planner_custom_end_label()}</label>
+				<input id="history-end-date" type="date" bind:value={filter_end_date} />
+			</div>
+		</div>
+	</section>
 
 	<section class="overview-grid">
 		<article class="stat-card">
@@ -74,108 +277,127 @@
 	<div class="content-grid">
 		<section class="panel current-plan">
 			<div class="panel-header">
-				<h2>{m.profile_history_current_plan()}</h2>
+				<h2>
+					{focused_plan_summary
+						? history_plan_snapshot()
+						: history_filtered_snapshot()}
+				</h2>
 				<span>
 					{m.profile_history_plan_range({
-						start: current_plan_summary.start_date ?? "-",
-						end: current_plan_summary.end_date ?? "-",
+						start: snapshot_range.start,
+						end: snapshot_range.end,
 					})}
 				</span>
 			</div>
-			<h3>{current_plan_summary.name}</h3>
-			<div class="summary-row">
-				<span
-					>{m.profile_history_plan_occurrences({
-						count: `${current_plan_summary.total_occurrences}`,
-					})}</span
-				>
-				<span
-					>{m.profile_history_plan_items({
-						count: `${current_plan_summary.shopping_item_count}`,
-					})}</span
-				>
-				<span
-					>{m.profile_history_plan_recurring({
-						count: `${current_plan_summary.recurring_series_count}`,
-					})}</span
-				>
-			</div>
-			<div class="chips">
-				{#each current_plan_summary.top_recipe_names as recipe_name}
-					<span>{recipe_name}</span>
-				{/each}
-			</div>
+			{#if filtered_plan_summaries.length === 0}
+				<p class="empty-copy">{history_empty()}</p>
+			{:else}
+				<h3>
+					{focused_plan_summary?.name ?? history_filtered_snapshot()}
+				</h3>
+				<div class="summary-row">
+					<span
+						>{m.profile_history_plan_occurrences({
+							count: `${totals.total_occurrences}`,
+						})}</span
+					>
+					<span
+						>{m.profile_history_plan_items({
+							count: `${totals.total_shopping_items}`,
+						})}</span
+					>
+					<span
+						>{m.profile_history_plan_recurring({
+							count: `${totals.total_recurring_series}`,
+						})}</span
+					>
+				</div>
+				<div class="chips">
+					{#each history_top_recipe_names as recipe_name}
+						<span>{recipe_name}</span>
+					{/each}
+				</div>
+			{/if}
 		</section>
 
 		<section class="panel activity-panel">
 			<h2>{m.profile_history_recent_activity()}</h2>
-			<div class="activity-list">
-				{#each current_plan_summary.recent_activity as activity}
-					<article class="activity-item">
-						<div>
-							<h3>
-								{m.profile_history_activity_meal({
-									recipe: activity.recipe_name,
-									date: activity.date,
-								})}
-							</h3>
-							{#if activity.recurrence_ends_on}
-								<p>
-									{m.profile_history_activity_recurring({
-										date: activity.recurrence_ends_on,
+			{#if history_activity.length === 0}
+				<p class="empty-copy">{history_empty()}</p>
+			{:else}
+				<div class="activity-list">
+					{#each history_activity as activity}
+						<article class="activity-item">
+							<div>
+								<h3>
+									{m.profile_history_activity_meal({
+										recipe: activity.recipe_name,
+										date: activity.date,
 									})}
-								</p>
-							{/if}
-						</div>
-						<time datetime={activity.date}>{activity.date}</time>
-					</article>
-				{/each}
-			</div>
+								</h3>
+								<p class="activity-plan">{activity.plan_name}</p>
+								{#if activity.recurrence_ends_on}
+									<p>
+										{m.profile_history_activity_recurring({
+											date: activity.recurrence_ends_on,
+										})}
+									</p>
+								{/if}
+							</div>
+							<time datetime={activity.date}>{activity.date}</time>
+						</article>
+					{/each}
+				</div>
+			{/if}
 		</section>
 	</div>
 
 	<section class="panel plan-list-panel">
-		<h2>{m.profile_history_previous_plans()}</h2>
-		<div class="plan-list">
-			{#each previous_plans as plan}
-				<article class="plan-card">
-					<div class="plan-card-header">
-						<div>
-							<h3>{plan.name}</h3>
-							<p>
-								{m.profile_history_plan_range({
-									start: plan.start_date ?? "-",
-									end: plan.end_date ?? "-",
-								})}
-							</p>
+		<h2>{history_matching_plans()}</h2>
+		{#if filtered_plan_summaries.length === 0}
+			<p class="empty-copy">{history_empty()}</p>
+		{:else}
+			<div class="plan-list">
+				{#each filtered_plan_summaries as plan}
+					<article class="plan-card">
+						<div class="plan-card-header">
+							<div>
+								<h3>{plan.name}</h3>
+								<p>
+									{m.profile_history_plan_range({
+										start: plan.start_date ?? "-",
+										end: plan.end_date ?? "-",
+									})}
+								</p>
+							</div>
+							<span class="period-badge">{plan.period}</span>
 						</div>
-						<span class="period-badge">{plan.period}</span>
-					</div>
-					<div class="summary-row compact">
-						<span
-							>{m.profile_history_plan_occurrences({
-								count: `${plan.total_occurrences}`,
-							})}</span
-						>
-						<span
-							>{m.profile_history_plan_items({
-								count: `${plan.shopping_item_count}`,
-							})}</span
-						>
-						<span
-							>{m.profile_history_plan_recurring({
-								count: `${plan.recurring_series_count}`,
-							})}</span
-						>
-					</div>
-					<div class="chips">
-						{#each plan.top_recipe_names as recipe_name}
-							<span>{recipe_name}</span>
-						{/each}
-					</div>
-				</article>
-			{/each}
-		</div>
+						<div class="summary-row compact">
+							<span
+								>{m.profile_history_plan_occurrences({
+									count: `${plan.total_occurrences}`,
+								})}</span
+							>
+							<span
+								>{m.profile_history_plan_items({
+									count: `${plan.shopping_item_count}`,
+								})}</span
+							>
+							<span
+								>{m.profile_history_plan_recurring({
+									count: `${plan.recurring_series_count}`,
+								})}</span
+							>
+						</div>
+						<div class="chips">
+							{#each plan.top_recipe_names as recipe_name}
+								<span>{recipe_name}</span>
+							{/each}
+						</div>
+					</article>
+				{/each}
+			</div>
+		{/if}
 	</section>
 </section>
 
@@ -217,6 +439,51 @@
 	.planner-link {
 		color: var(--primary);
 		font-weight: 600;
+	}
+
+	.filters-panel {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.filter-grid {
+		display: grid;
+		gap: 0.9rem;
+		grid-template-columns: 1fr;
+
+		@include md {
+			grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
+			align-items: end;
+		}
+	}
+
+	.field-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.45rem;
+		min-width: 0;
+
+		label {
+			font-size: 0.875rem;
+			font-weight: 600;
+		}
+
+		input,
+		select {
+			width: 100%;
+			min-width: 0;
+			padding: 0.75rem 0.85rem;
+			background-color: color-mix(in srgb, var(--surface) 92%, transparent);
+			border: 1px solid var(--border);
+			border-radius: 16px;
+			color: var(--text);
+		}
+
+		select {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
 	}
 
 	.overview-grid {
@@ -315,6 +582,11 @@
 		time {
 			color: var(--text-muted);
 		}
+	}
+
+	.activity-plan,
+	.empty-copy {
+		color: var(--text-muted);
 	}
 
 	.plan-card p {
