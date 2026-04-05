@@ -6,6 +6,8 @@
 	import { useThemeStore } from "$lib/stores/theme.svelte";
 	import { announce } from "$lib/utils/announce";
 	import Icon from "@iconify/svelte";
+	import menuIcon from "@iconify-icons/mdi/menu";
+	import closeIcon from "@iconify-icons/mdi/close";
 	import chevronDown from "@iconify-icons/mdi/chevron-down";
 	import weatherNight from "@iconify-icons/mdi/weather-night";
 	import weatherSunny from "@iconify-icons/mdi/weather-sunny";
@@ -30,7 +32,8 @@
 			),
 	);
 
-	let open = $state(false);
+	let locale_open = $state(false);
+	let menu_open = $state(false);
 	let activeIndex = $state(-1);
 	let triggerRef = $state<HTMLButtonElement | null>(null);
 
@@ -40,7 +43,7 @@
 	};
 
 	function selectLocale(locale: string) {
-		open = false;
+		locale_open = false;
 		activeIndex = -1;
 		triggerRef?.focus();
 		if (locale !== getLocale()) {
@@ -59,14 +62,22 @@
 	}
 
 	function openDropdown() {
-		open = true;
+		locale_open = true;
 		activeIndex = locales.indexOf(getLocale());
 	}
 
 	function closeDropdown() {
-		open = false;
+		locale_open = false;
 		activeIndex = -1;
 		triggerRef?.focus();
+	}
+
+	function closeMenu() {
+		menu_open = false;
+	}
+
+	function toggleMenu() {
+		menu_open = !menu_open;
 	}
 
 	function handleTriggerKeydown(event: KeyboardEvent) {
@@ -78,7 +89,7 @@
 				openDropdown();
 				break;
 			case "Escape":
-				if (open) {
+				if (locale_open) {
 					event.preventDefault();
 					closeDropdown();
 				}
@@ -116,8 +127,12 @@
 	function handleClickOutside(event: MouseEvent) {
 		const target = event.target as HTMLElement;
 		if (!target.closest(".locale-picker")) {
-			open = false;
+			locale_open = false;
 			activeIndex = -1;
+		}
+
+		if (!target.closest(".header")) {
+			menu_open = false;
 		}
 	}
 
@@ -130,12 +145,19 @@
 	}
 
 	$effect(() => {
-		if (open && activeIndex >= 0) {
+		if (locale_open && activeIndex >= 0) {
 			const option = document.querySelector(
 				".locale-option.focused",
 			) as HTMLElement | null;
 			option?.focus();
 		}
+	});
+
+	$effect(() => {
+		page.url.pathname;
+		menu_open = false;
+		locale_open = false;
+		activeIndex = -1;
 	});
 </script>
 
@@ -147,85 +169,107 @@
 		<span class="title">SuaReceita</span>
 	</a>
 	<nav aria-label={m.a11y_main_navigation()}>
-		<div class="primary-links">
+		<div
+			id="mobile-navigation-links"
+			class="primary-links"
+			class:open={menu_open}
+		>
 			{#each navigation_links as link}
-				<a href={localizeHref(link.href)} class:active={isActive(link.href)}>
+				<a
+					href={localizeHref(link.href)}
+					class:active={isActive(link.href)}
+					onclick={closeMenu}
+				>
 					{link.label()}
 				</a>
 			{/each}
 		</div>
-		<div class="locale-picker">
-			<button
-				bind:this={triggerRef}
-				class="locale-trigger"
-				onclick={() => (open ? closeDropdown() : openDropdown())}
-				onkeydown={handleTriggerKeydown}
-				aria-label={m.a11y_select_language()}
-				aria-expanded={open}
-				aria-haspopup="listbox"
-			>
-				<Icon
-					icon={localeMap[getLocale()]?.flag ?? "circle-flags:us"}
-					width="16"
-					height="16"
-				/>
-				<span class="locale-label">{localeMap[getLocale()]?.label ?? "EN"}</span
+		<div class="secondary-actions">
+			<div class="locale-picker">
+				<button
+					bind:this={triggerRef}
+					class="locale-trigger"
+					onclick={() => (locale_open ? closeDropdown() : openDropdown())}
+					onkeydown={handleTriggerKeydown}
+					aria-label={m.a11y_select_language()}
+					aria-expanded={locale_open}
+					aria-haspopup="listbox"
 				>
-				<span class="locale-chevron" aria-hidden="true">
-					<Icon icon={chevronDown} width="14" height="14" />
+					<Icon
+						icon={localeMap[getLocale()]?.flag ?? "circle-flags:us"}
+						width="16"
+						height="16"
+					/>
+					<span class="locale-label"
+						>{localeMap[getLocale()]?.label ?? "EN"}</span
+					>
+					<span class="locale-chevron" aria-hidden="true">
+						<Icon icon={chevronDown} width="14" height="14" />
+					</span>
+				</button>
+				{#if locale_open}
+					<ul
+						class="locale-dropdown"
+						role="listbox"
+						aria-label={m.a11y_select_language()}
+						onkeydown={handleDropdownKeydown}
+					>
+						{#each locales as locale, i}
+							<li
+								role="option"
+								aria-selected={locale === getLocale()}
+								class="locale-option"
+								class:active={locale === getLocale()}
+								class:focused={i === activeIndex}
+								onclick={() => selectLocale(locale)}
+								onkeydown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.preventDefault();
+										selectLocale(locale);
+									}
+								}}
+								tabindex={i === activeIndex ? 0 : -1}
+							>
+								<Icon
+									icon={localeMap[locale]?.flag ?? locale}
+									width="18"
+									height="18"
+								/>
+								<span>{localeMap[locale]?.label ?? locale.toUpperCase()}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+			<button
+				class="switch"
+				onclick={toggleTheme}
+				aria-label={m.a11y_toggle_theme()}
+				class:dark={theme.current === "dark"}
+				role="switch"
+				aria-checked={theme.current === "dark"}
+			>
+				<span class="track">
+					<Icon icon={weatherSunny} aria-hidden="true" />
+					<Icon icon={weatherNight} aria-hidden="true" />
+					<span class="thumb"></span>
 				</span>
 			</button>
-			{#if open}
-				<ul
-					class="locale-dropdown"
-					role="listbox"
-					aria-label={m.a11y_select_language()}
-					onkeydown={handleDropdownKeydown}
-				>
-					{#each locales as locale, i}
-						<li
-							role="option"
-							aria-selected={locale === getLocale()}
-							class="locale-option"
-							class:active={locale === getLocale()}
-							class:focused={i === activeIndex}
-							onclick={() => selectLocale(locale)}
-							onkeydown={(e) => {
-								if (e.key === "Enter" || e.key === " ") {
-									e.preventDefault();
-									selectLocale(locale);
-								}
-							}}
-							tabindex={i === activeIndex ? 0 : -1}
-						>
-							<Icon
-								icon={localeMap[locale]?.flag ?? locale}
-								width="18"
-								height="18"
-							/>
-							<span>{localeMap[locale]?.label ?? locale.toUpperCase()}</span>
-						</li>
-					{/each}
-				</ul>
+			{#if !auth.isAuthenticated && !isAuthPage}
+				<a class="auth-link" href={localizeHref("/login")}>{m.auth_login()}</a>
 			{/if}
+			<button
+				class="menu-toggle"
+				type="button"
+				onclick={toggleMenu}
+				aria-label={m.a11y_main_navigation()}
+				aria-expanded={menu_open}
+				aria-controls="mobile-navigation-links"
+			>
+				<Icon icon={menu_open ? closeIcon : menuIcon} width="20" height="20" />
+				<span class="sr-only">{m.a11y_main_navigation()}</span>
+			</button>
 		</div>
-		<button
-			class="switch"
-			onclick={toggleTheme}
-			aria-label={m.a11y_toggle_theme()}
-			class:dark={theme.current === "dark"}
-			role="switch"
-			aria-checked={theme.current === "dark"}
-		>
-			<span class="track">
-				<Icon icon={weatherSunny} aria-hidden="true" />
-				<Icon icon={weatherNight} aria-hidden="true" />
-				<span class="thumb"></span>
-			</span>
-		</button>
-		{#if !auth.isAuthenticated && !isAuthPage}
-			<a class="auth-link" href={localizeHref("/login")}>{m.auth_login()}</a>
-		{/if}
 	</nav>
 </header>
 
@@ -275,8 +319,8 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		flex-wrap: wrap;
 		justify-content: flex-end;
+		position: relative;
 
 		@include md {
 			gap: 1rem;
@@ -284,20 +328,70 @@
 	}
 
 	.primary-links {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
+		display: none;
+		position: absolute;
+		top: calc(100% + 0.75rem);
+		right: 0;
+		left: auto;
+		min-width: min(18rem, calc(100vw - 2rem));
+		padding: 0.5rem;
+		border: 1px solid var(--border);
+		border-radius: 20px;
+		background-color: color-mix(in srgb, var(--surface) 98%, transparent);
+		box-shadow: var(--box-shadow);
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.35rem;
+
+		&.open {
+			display: flex;
+		}
 
 		a {
 			font-size: 0.8125rem;
 			color: var(--text-muted);
 			white-space: nowrap;
+			padding: 0.7rem 0.85rem;
+			border-radius: 14px;
 
 			&:hover,
 			&.active {
+				background-color: color-mix(in srgb, var(--primary) 14%, transparent);
 				color: var(--primary);
 			}
+		}
+
+		@include md {
+			display: flex;
+			position: static;
+			min-width: auto;
+			padding: 0;
+			border: none;
+			border-radius: 0;
+			background: none;
+			box-shadow: none;
+			flex-direction: row;
+			align-items: center;
+			gap: 0.75rem;
+
+			a {
+				padding: 0;
+				border-radius: 0;
+				background: none;
+			}
+		}
+	}
+
+	.secondary-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.75rem;
+		flex-wrap: nowrap;
+
+		@include md {
+			justify-content: flex-end;
+			width: auto;
 		}
 	}
 
@@ -409,6 +503,24 @@
 		text-align: center;
 		font-size: 0.8125rem;
 		white-space: nowrap;
+	}
+
+	.menu-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background-color: color-mix(in srgb, var(--surface) 94%, transparent);
+		color: var(--text);
+		cursor: pointer;
+		flex-shrink: 0;
+
+		@include md {
+			display: none;
+		}
 	}
 
 	.switch {
