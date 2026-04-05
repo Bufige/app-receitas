@@ -10,6 +10,7 @@
 	import closeIcon from "@iconify-icons/mdi/close";
 	import silverwareForkKnife from "@iconify-icons/mdi/silverware-fork-knife";
 	import calendarMonthOutline from "@iconify-icons/mdi/calendar-month-outline";
+	import calendarTextOutline from "@iconify-icons/mdi/calendar-text-outline";
 	import cartOutline from "@iconify-icons/mdi/cart-outline";
 	import homeAccount from "@iconify-icons/mdi/home-account";
 	import weatherNight from "@iconify-icons/mdi/weather-night";
@@ -29,6 +30,11 @@
 			href: "/planner",
 			label: () => m.nav_planner(),
 			icon: calendarMonthOutline,
+		},
+		{
+			href: "/planned-meals",
+			label: () => m.nav_planned_meals(),
+			icon: calendarTextOutline,
 		},
 		{
 			href: "/shopping-list",
