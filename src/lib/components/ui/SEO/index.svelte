@@ -18,7 +18,7 @@
 		type = "website",
 	}: Props = $props();
 
-	const siteName = "Saudade Pet";
+	const siteName = "SuaReceita";
 	const fullTitle = $derived(`${title} | ${siteName}`);
 	const canonicalUrl = $derived(page.url.href);
 	const locale = $derived(getLocale() === "pt-br" ? "pt_BR" : "en_US");

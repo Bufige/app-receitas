@@ -14,6 +14,13 @@
 	const auth = useAuthStore(),
 		theme = useThemeStore();
 
+	const navigation_links = [
+		{ href: "/recipes", label: () => m.nav_recipes() },
+		{ href: "/planner", label: () => m.nav_planner() },
+		{ href: "/shopping-list", label: () => m.nav_shopping_list() },
+		{ href: "/profile/household", label: () => m.nav_household_profile() },
+	];
+
 	const isAuthPage = $derived(
 		/^\/(login|register|forgot-password|magic-link)(\/|$)/.test(
 			page.url.pathname,
@@ -114,6 +121,14 @@
 		}
 	}
 
+	function isActive(path: string) {
+		const localized_path = localizeHref(path);
+		return (
+			page.url.pathname === localized_path ||
+			page.url.pathname.startsWith(`${localized_path}/`)
+		);
+	}
+
 	$effect(() => {
 		if (open && activeIndex >= 0) {
 			const option = document.querySelector(
@@ -129,9 +144,16 @@
 <header class="header">
 	<a class="logo" href={localizeHref("/")} aria-label={m.a11y_logo_label()}>
 		<Logo aria-hidden="true" />
-		<span class="title">Saudade Pet</span>
+		<span class="title">SuaReceita</span>
 	</a>
 	<nav aria-label={m.a11y_main_navigation()}>
+		<div class="primary-links">
+			{#each navigation_links as link}
+				<a href={localizeHref(link.href)} class:active={isActive(link.href)}>
+					{link.label()}
+				</a>
+			{/each}
+		</div>
 		<div class="locale-picker">
 			<button
 				bind:this={triggerRef}
@@ -253,9 +275,29 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
+		flex-wrap: wrap;
+		justify-content: flex-end;
 
 		@include md {
 			gap: 1rem;
+		}
+	}
+
+	.primary-links {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+
+		a {
+			font-size: 0.8125rem;
+			color: var(--text-muted);
+			white-space: nowrap;
+
+			&:hover,
+			&.active {
+				color: var(--primary);
+			}
 		}
 	}
 
