@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from "$app/state";
 	import Button from "$lib/components/ui/Button/index.svelte";
+	import PageHero from "$lib/components/ui/PageHero/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import { get_recipe_by_slug } from "$lib/mocks/recipes";
 	import * as m from "$lib/paraglide/messages.js";
@@ -23,44 +24,44 @@
 			>{m.recipe_detail_back()}</a
 		>
 
-		<header class="hero">
-			<div>
-				<h1>{recipe.name}</h1>
-				{#if recipe.description}
-					<p>{recipe.description}</p>
+		<PageHero title={recipe.name} subtitle={recipe.description}>
+			{#snippet actions()}
+				<Button
+					class="planner-link"
+					variant="primary"
+					size="medium"
+					round
+					href={localizeHref(`/planner?recipe=${recipe.id}`)}
+				>
+					{m.recipe_detail_add_to_plan()}
+				</Button>
+			{/snippet}
+		</PageHero>
+
+		<div class="overview" class:without-image={!recipe.image_url}>
+			{#if recipe.image_url}
+				<img class="image" src={recipe.image_url} alt={recipe.name} />
+			{/if}
+
+			<div class="summary-panel">
+				<div class="meta">
+					<span>{m.recipes_servings()}: {recipe.servings}</span>
+					<span
+						>{m.recipes_prep_time()}: {m.recipes_minutes({
+							count: `${recipe.preparation_time_in_minutes}`,
+						})}</span
+					>
+				</div>
+
+				{#if recipe.tags?.length}
+					<div class="tags">
+						{#each recipe.tags as tag}
+							<span>{get_recipe_tag_label(tag, m)}</span>
+						{/each}
+					</div>
 				{/if}
 			</div>
-			<Button
-				class="planner-link"
-				variant="primary"
-				size="medium"
-				round
-				href={localizeHref(`/planner?recipe=${recipe.id}`)}
-			>
-				{m.recipe_detail_add_to_plan()}
-			</Button>
-		</header>
-
-		{#if recipe.image_url}
-			<img class="image" src={recipe.image_url} alt={recipe.name} />
-		{/if}
-
-		<div class="meta">
-			<span>{m.recipes_servings()}: {recipe.servings}</span>
-			<span
-				>{m.recipes_prep_time()}: {m.recipes_minutes({
-					count: `${recipe.preparation_time_in_minutes}`,
-				})}</span
-			>
 		</div>
-
-		{#if recipe.tags?.length}
-			<div class="tags">
-				{#each recipe.tags as tag}
-					<span>{get_recipe_tag_label(tag, m)}</span>
-				{/each}
-			</div>
-		{/if}
 
 		<div class="content-grid">
 			<section class="panel">
@@ -115,46 +116,6 @@
 		font-weight: 600;
 	}
 
-	.hero {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		padding: 1.25rem;
-		border-radius: 20px;
-		background: linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--surface) 95%, white),
-			color-mix(in srgb, var(--secondary) 12%, white)
-		);
-		border: 1px solid var(--border);
-		box-shadow: var(--soft-box-shadow);
-
-		@include md {
-			flex-direction: row;
-			justify-content: space-between;
-			align-items: center;
-		}
-
-		h1 {
-			font-size: 1.75rem;
-			margin-bottom: 0.5rem;
-		}
-
-		p {
-			color: var(--text-muted);
-			max-width: 40rem;
-		}
-
-		:global(.btn) {
-			width: 100%;
-
-			@include md {
-				width: auto;
-				min-width: 11rem;
-			}
-		}
-	}
-
 	.meta,
 	.tags {
 		display: flex;
@@ -167,10 +128,34 @@
 	}
 
 	.tags span {
-		padding: 0.25rem 0.625rem;
+		display: inline-flex;
+		align-items: center;
+		padding: 0.35rem 0.75rem;
 		border-radius: 999px;
-		background-color: color-mix(in srgb, var(--primary) 14%, transparent);
+		border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--primary) 10%, var(--surface)) 0%,
+			color-mix(in srgb, var(--primary) 6%, var(--surface)) 100%
+		);
+		color: var(--primary);
 		font-size: 0.8125rem;
+		font-weight: 600;
+	}
+
+	.overview {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1rem;
+
+		@include lg {
+			grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 0.8fr);
+			align-items: start;
+		}
+
+		&.without-image {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	.image {
@@ -180,6 +165,26 @@
 		border-radius: 20px;
 		border: 1px solid var(--border);
 		box-shadow: var(--soft-box-shadow);
+
+		@include lg {
+			aspect-ratio: 16 / 7.25;
+			max-height: 26rem;
+		}
+	}
+
+	.summary-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1rem;
+		border-radius: 20px;
+		border: 1px solid var(--border);
+		background-color: color-mix(in srgb, var(--surface) 94%, transparent);
+		box-shadow: var(--soft-box-shadow);
+
+		@include lg {
+			min-height: 100%;
+		}
 	}
 
 	.content-grid {

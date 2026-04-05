@@ -8,6 +8,10 @@
 	import Icon from "@iconify/svelte";
 	import menuIcon from "@iconify-icons/mdi/menu";
 	import closeIcon from "@iconify-icons/mdi/close";
+	import silverwareForkKnife from "@iconify-icons/mdi/silverware-fork-knife";
+	import calendarMonthOutline from "@iconify-icons/mdi/calendar-month-outline";
+	import cartOutline from "@iconify-icons/mdi/cart-outline";
+	import homeAccount from "@iconify-icons/mdi/home-account";
 	import chevronDown from "@iconify-icons/mdi/chevron-down";
 	import weatherNight from "@iconify-icons/mdi/weather-night";
 	import weatherSunny from "@iconify-icons/mdi/weather-sunny";
@@ -17,10 +21,26 @@
 		theme = useThemeStore();
 
 	const navigation_links = [
-		{ href: "/recipes", label: () => m.nav_recipes() },
-		{ href: "/planner", label: () => m.nav_planner() },
-		{ href: "/shopping-list", label: () => m.nav_shopping_list() },
-		{ href: "/profile/household", label: () => m.nav_household_profile() },
+		{
+			href: "/recipes",
+			label: () => m.nav_recipes(),
+			icon: silverwareForkKnife,
+		},
+		{
+			href: "/planner",
+			label: () => m.nav_planner(),
+			icon: calendarMonthOutline,
+		},
+		{
+			href: "/shopping-list",
+			label: () => m.nav_shopping_list(),
+			icon: cartOutline,
+		},
+		{
+			href: "/profile/household",
+			label: () => m.nav_household_profile(),
+			icon: homeAccount,
+		},
 	];
 
 	const isAuthPage = $derived(
@@ -176,11 +196,16 @@
 		>
 			{#each navigation_links as link}
 				<a
+					class="nav-link"
 					href={localizeHref(link.href)}
 					class:active={isActive(link.href)}
+					aria-current={isActive(link.href) ? "page" : undefined}
 					onclick={closeMenu}
 				>
-					{link.label()}
+					<span class="nav-icon" aria-hidden="true">
+						<Icon icon={link.icon} width="18" height="18" />
+					</span>
+					<span class="nav-label">{link.label()}</span>
 				</a>
 			{/each}
 		</div>
@@ -342,23 +367,10 @@
 		flex-direction: column;
 		align-items: stretch;
 		gap: 0.35rem;
+		backdrop-filter: blur(18px);
 
 		&.open {
 			display: flex;
-		}
-
-		a {
-			font-size: 0.8125rem;
-			color: var(--text-muted);
-			white-space: nowrap;
-			padding: 0.7rem 0.85rem;
-			border-radius: 14px;
-
-			&:hover,
-			&.active {
-				background-color: color-mix(in srgb, var(--primary) 14%, transparent);
-				color: var(--primary);
-			}
 		}
 
 		@include md {
@@ -373,13 +385,78 @@
 			flex-direction: row;
 			align-items: center;
 			gap: 0.75rem;
-
-			a {
-				padding: 0;
-				border-radius: 0;
-				background: none;
-			}
 		}
+	}
+
+	.nav-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.55rem;
+		min-height: 2.75rem;
+		padding: 0.75rem 0.95rem;
+		border: 1px solid transparent;
+		border-radius: 16px;
+		background-color: transparent;
+		color: var(--text-muted);
+		font-size: 0.875rem;
+		font-weight: 600;
+		white-space: nowrap;
+		transition:
+			background-color 0.2s ease,
+			border-color 0.2s ease,
+			color 0.2s ease,
+			box-shadow 0.2s ease,
+			transform 0.2s ease;
+		-webkit-tap-highlight-color: transparent;
+
+		&:hover {
+			background-color: color-mix(in srgb, var(--primary) 10%, var(--surface));
+			border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
+			color: var(--text);
+		}
+
+		&:active {
+			transform: translateY(1px);
+			background-color: color-mix(in srgb, var(--primary) 14%, var(--surface));
+		}
+
+		&:focus-visible {
+			outline: none;
+			border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
+			box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+		}
+
+		&.active {
+			background: linear-gradient(
+				180deg,
+				color-mix(in srgb, var(--primary) 16%, var(--surface)) 0%,
+				color-mix(in srgb, var(--primary) 10%, var(--surface)) 100%
+			);
+			border-color: color-mix(in srgb, var(--primary) 26%, var(--border));
+			box-shadow: inset 0 1px 0
+				color-mix(in srgb, var(--white) 48%, transparent);
+			color: var(--primary);
+		}
+
+		@include md {
+			min-height: 2.5rem;
+			padding: 0.55rem 0.8rem;
+			border-radius: 999px;
+			font-size: 0.8125rem;
+		}
+	}
+
+	.nav-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: currentColor;
+		line-height: 0;
+		flex-shrink: 0;
+	}
+
+	.nav-label {
+		line-height: 1;
 	}
 
 	.secondary-actions {

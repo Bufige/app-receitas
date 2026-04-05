@@ -3,6 +3,7 @@ $sm: 640px;
 $md: 768px;
 $lg: 1024px;
 $xl: 1280px;
+$wide: 1440px;
 $xxl: 1536px;
 
 // Mixins for convenience
@@ -26,6 +27,12 @@ $xxl: 1536px;
 
 @mixin xl {
 	@media (min-width: $xl) {
+		@content;
+	}
+}
+
+@mixin wide {
+	@media (min-width: $wide) {
 		@content;
 	}
 }
