@@ -12,6 +12,7 @@ import type {
 import {
 	detect_meal_plan_conflicts,
 	get_preset_range,
+	type PlanWindowValidationResult,
 	validate_meal_plan_entry_window,
 } from "$lib/utils/planning";
 import { calculate_shopping_list } from "$lib/utils/shopping-list";
@@ -330,7 +331,7 @@ export function useMealPlanStore() {
 			meal_type: MealPlanEntry["meal_type"];
 			servings?: number;
 			recurrence_rule?: RecurrenceRule;
-		}) {
+		}): PlanWindowValidationResult {
 			const current_plan = get_active_plan(meal_plans, active_plan_id);
 			const next_entry: MealPlanEntry = {
 				id: build_entry_id(),
@@ -358,7 +359,10 @@ export function useMealPlanStore() {
 			persist_plans();
 			return { ok: true };
 		},
-		updateEntry(entry_id: string, updates: Partial<MealPlanEntry>) {
+		updateEntry(
+			entry_id: string,
+			updates: Partial<MealPlanEntry>,
+		): PlanWindowValidationResult {
 			const current_plan = get_active_plan(meal_plans, active_plan_id);
 			const current_entry = current_plan.entries.find(
 				(entry) => entry.id === entry_id,
@@ -391,7 +395,10 @@ export function useMealPlanStore() {
 			persist_plans();
 			return { ok: true };
 		},
-		updateSeries(series_id: string, updates: Partial<MealPlanEntry>) {
+		updateSeries(
+			series_id: string,
+			updates: Partial<MealPlanEntry>,
+		): PlanWindowValidationResult {
 			const current_plan = get_active_plan(meal_plans, active_plan_id);
 			const series_entries = current_plan.entries.filter(
 				(entry) => entry.series_id === series_id,
