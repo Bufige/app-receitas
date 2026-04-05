@@ -31,18 +31,29 @@
 	.page-hero {
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
-		padding: 0.75rem 0.9rem;
+		gap: 0.6rem;
+		padding: 1rem;
 		border: 1px solid var(--border);
-		border-radius: 18px;
-		background: linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--surface) 97%, white),
-			color-mix(in srgb, var(--secondary) 7%, white)
-		);
+		border-radius: 24px;
+		background: radial-gradient(
+				circle at top right,
+				color-mix(in srgb, var(--secondary) 14%, transparent),
+				transparent 28%
+			),
+			radial-gradient(
+				circle at left center,
+				color-mix(in srgb, var(--primary) 10%, transparent),
+				transparent 26%
+			),
+			linear-gradient(
+				180deg,
+				color-mix(in srgb, var(--surface) 97%, transparent),
+				color-mix(in srgb, var(--surface-muted) 80%, var(--surface))
+			);
+		box-shadow: var(--soft-box-shadow);
 
 		@include md {
-			padding: 0.8rem 1rem;
+			padding: 1.1rem 1.2rem;
 		}
 
 		&.has-actions {
@@ -60,23 +71,28 @@
 	.copy {
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		gap: 0.35rem;
 		min-width: 0;
 
 		h1 {
-			font-size: 1.2rem;
-			line-height: 1.15;
+			font-size: 1.35rem;
+			line-height: 1.05;
+			letter-spacing: -0.02em;
 
 			@include md {
-				font-size: 1.35rem;
+				font-size: 1.7rem;
 			}
 		}
 
 		p {
 			color: var(--text-muted);
-			font-size: 0.875rem;
+			font-size: 0.95rem;
 			line-height: 1.4;
 			max-width: 34rem;
+
+			@include md {
+				font-size: 1rem;
+			}
 		}
 	}
 

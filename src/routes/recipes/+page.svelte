@@ -92,32 +92,45 @@
 <SEO title={m.seo_recipes_title()} description={m.seo_recipes_description()} />
 
 <section class="page">
-	<PageHero title={m.recipes_title()} subtitle={m.recipes_subtitle()} />
+	<PageHero title={m.recipes_title()} subtitle={m.recipes_subtitle()}>
+		{#snippet actions()}
+			<Button
+				variant="primary"
+				size="medium"
+				round
+				href={localizeHref("/planner")}
+			>
+				{m.nav_planner()}
+			</Button>
+		{/snippet}
+	</PageHero>
 
-	<div class="search">
-		<Input
-			id="recipe-search"
-			label={m.recipes_search_label()}
-			placeholder={m.recipes_search_placeholder()}
-			icon={magnify}
-			bind:value={search}
-		/>
-	</div>
-
-	{#if all_tags.length}
-		<div class="filter-bar" aria-label={m.recipes_search_label()}>
-			{#each all_tags as tag}
-				<a
-					href={get_tag_filter_href(tag)}
-					class="tag-chip filter-chip"
-					class:selected={selected_tags.includes(tag)}
-					aria-current={selected_tags.includes(tag) ? "true" : undefined}
-				>
-					{get_recipe_tag_label(tag, m)}
-				</a>
-			{/each}
+	<div class="toolbar surface-panel">
+		<div class="search">
+			<Input
+				id="recipe-search"
+				label={m.recipes_search_label()}
+				placeholder={m.recipes_search_placeholder()}
+				icon={magnify}
+				bind:value={search}
+			/>
 		</div>
-	{/if}
+
+		{#if all_tags.length}
+			<div class="filter-bar" aria-label={m.recipes_search_label()}>
+				{#each all_tags as tag}
+					<a
+						href={get_tag_filter_href(tag)}
+						class="tag-chip filter-chip"
+						class:selected={selected_tags.includes(tag)}
+						aria-current={selected_tags.includes(tag) ? "true" : undefined}
+					>
+						{get_recipe_tag_label(tag, m)}
+					</a>
+				{/each}
+			</div>
+		{/if}
+	</div>
 
 	{#if filtered_recipes.length === 0}
 		<p class="empty">{m.recipes_empty()}</p>
@@ -199,19 +212,36 @@
 	.page {
 		display: flex;
 		flex-direction: column;
+		gap: 1rem;
+
+		@include md {
+			gap: 1.1rem;
+		}
+	}
+
+	.toolbar {
+		display: grid;
 		gap: 0.9rem;
+		padding: 0.9rem;
+		background: radial-gradient(
+				circle at top right,
+				color-mix(in srgb, var(--secondary) 10%, transparent),
+				transparent 28%
+			),
+			linear-gradient(
+				180deg,
+				color-mix(in srgb, var(--surface) 97%, transparent),
+				color-mix(in srgb, var(--surface-muted) 68%, var(--surface))
+			);
 
 		@include md {
 			gap: 1rem;
+			padding: 1rem;
 		}
 	}
 
 	.search {
 		max-width: 30rem;
-
-		@include md {
-			margin-top: 0.15rem;
-		}
 	}
 
 	.filter-bar {
@@ -219,6 +249,7 @@
 		flex-wrap: wrap;
 		gap: 0.75rem 0.5rem;
 		align-items: center;
+		align-content: flex-start;
 	}
 
 	.grid {
