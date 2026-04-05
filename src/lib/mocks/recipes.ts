@@ -128,6 +128,136 @@ export const mock_recipes: Recipe[] = [
 		],
 	},
 	{
+		id: "recipe-chicken-parmigiana",
+		slug: "file-de-frango-a-parmegiana",
+		name: "Filé de Frango à Parmegiana",
+		description:
+			"Chicken breast fillets baked with tomato sauce, mozzarella, oregano, and a crisp breadcrumb coating.",
+		image_url:
+			"https://static.itdg.com.br/images/640-400/9f5e6aa2a8b5bde896858f139b2c422c/228002-original.jpg",
+		servings: 6,
+		preparation_time_in_minutes: 50,
+		tags: ["dinner", "chicken", "baked"],
+		ingredients: [
+			{
+				id: "ingredient-chicken-fillet",
+				name: "Chicken breast fillet",
+				quantity: 6,
+				unit: "unit",
+				category: "meat",
+			},
+			{
+				id: "ingredient-garlic",
+				name: "Garlic",
+				quantity: 2,
+				unit: "unit",
+				category: "vegetables",
+			},
+			{
+				id: "ingredient-salt",
+				name: "Salt",
+				quantity: 5,
+				unit: "g",
+				category: "spices",
+			},
+			{
+				id: "ingredient-black-pepper",
+				name: "Black pepper",
+				quantity: 2,
+				unit: "g",
+				category: "spices",
+			},
+			{
+				id: "ingredient-mayonnaise",
+				name: "Mayonnaise",
+				quantity: 60,
+				unit: "ml",
+				category: "condiments",
+			},
+			{
+				id: "ingredient-breadcrumbs",
+				name: "Breadcrumbs",
+				quantity: 200,
+				unit: "g",
+				category: "bakery",
+			},
+			{
+				id: "ingredient-parmigiana-tomato-sauce",
+				name: "Tomato sauce",
+				quantity: 340,
+				unit: "ml",
+				category: "canned",
+			},
+			{
+				id: "ingredient-mozzarella",
+				name: "Mozzarella",
+				quantity: 200,
+				unit: "g",
+				category: "dairy",
+			},
+			{
+				id: "ingredient-vegetable-oil",
+				name: "Oil",
+				quantity: 15,
+				unit: "ml",
+				category: "oils",
+			},
+			{
+				id: "ingredient-oregano",
+				name: "Oregano",
+				quantity: 2,
+				unit: "g",
+				category: "spices",
+			},
+		],
+		instructions: [
+			{
+				step: 1,
+				description:
+					"Place the chicken fillets between sheets of plastic wrap so they can be flattened without tearing.",
+			},
+			{
+				step: 2,
+				description:
+					"Gently pound the fillets until they reach a similar thickness for even cooking.",
+			},
+			{
+				step: 3,
+				description: "Season both sides with garlic, salt, and black pepper.",
+			},
+			{
+				step: 4,
+				description:
+					"Spread mayonnaise over the fillets and coat them evenly with breadcrumbs.",
+			},
+			{
+				step: 5,
+				description:
+					"Arrange the breaded fillets on a lightly oiled baking tray or dish.",
+			},
+			{
+				step: 6,
+				description:
+					"Bake in a medium oven for about 30 minutes, until the coating is set and lightly golden.",
+			},
+			{
+				step: 7,
+				description:
+					"Remove the dish from the oven and cover the fillets with tomato sauce, mozzarella, and oregano.",
+			},
+			{
+				step: 8,
+				description:
+					"Return to the oven briefly, just long enough for the cheese to melt and brown slightly.",
+			},
+			{
+				step: 9,
+				description:
+					"Serve right away, optionally with white rice and potato sticks on the side.",
+			},
+		],
+	},
+	{
 		id: "recipe-chickpea-salad",
 		slug: "chickpea-salad",
 		name: "Mediterranean Chickpea Salad",
