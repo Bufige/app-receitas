@@ -1,7 +1,5 @@
 <script lang="ts">
 	import Icon from "@iconify/svelte";
-	import calendarRangeOutline from "@iconify-icons/mdi/calendar-range-outline";
-	import calendarTextOutline from "@iconify-icons/mdi/calendar-text-outline";
 	import cartOutline from "@iconify-icons/mdi/cart-outline";
 	import checkCircleOutline from "@iconify-icons/mdi/check-circle-outline";
 	import clockOutline from "@iconify-icons/mdi/clock-outline";
@@ -13,31 +11,20 @@
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import type {
-		ExpandedMealPlanEntry,
-		MealType,
 		ShoppingListItem,
 		ShoppingItemStatus,
 	} from "$lib/types/planning";
-	import {
-		expand_meal_plan_entries,
-		format_plan_range_label,
-		format_plan_selection_label,
-	} from "$lib/utils/planning";
-	import {
-		build_planned_meal_key,
-		calculate_shopping_list_from_occurrences,
-		filter_occurrences_by_selected_meals,
-		group_shopping_list_by_category,
-	} from "$lib/utils/shopping-list";
+	import { format_plan_range_label } from "$lib/utils/planning";
+	import { group_shopping_list_by_category } from "$lib/utils/shopping-list";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
 
 	const meal_plan_store = useMealPlanStore();
-	const available_plans = $derived(meal_plan_store.mealPlans);
-	let selected_occurrence_keys = $state<string[]>([]);
-	let shopping_item_statuses = $state<Record<string, ShoppingItemStatus>>({
-		...meal_plan_store.shoppingItemStatuses,
-	});
+	const active_plan = $derived(meal_plan_store.mealPlan);
+	const shopping_view = $derived.by(() =>
+		build_shopping_view(meal_plan_store.shoppingList),
+	);
+	const range_label = $derived.by(() => format_plan_range_label(active_plan));
 	let floating_progress_element = $state<HTMLDivElement | null>(null);
 	let floating_progress_position = $state<{ x: number; y: number } | null>(
 		null,
@@ -91,32 +78,6 @@
 			progress_value,
 		};
 	}
-
-	const expanded_entries = $derived.by(() =>
-		expand_meal_plan_entries(
-			meal_plan_store.mealPlan.entries,
-			meal_plan_store.mealPlan.start_date,
-			meal_plan_store.mealPlan.end_date,
-		),
-	);
-	const selected_occurrences = $derived.by(() =>
-		filter_occurrences_by_selected_meals(
-			expanded_entries,
-			selected_occurrence_keys,
-		),
-	);
-	const shopping_view = $derived.by(() => {
-		const items = calculate_shopping_list_from_occurrences(
-			meal_plan_store.recipes,
-			selected_occurrences,
-			shopping_item_statuses,
-		);
-
-		return build_shopping_view(items);
-	});
-	const range_label = $derived.by(() =>
-		format_plan_range_label(meal_plan_store.mealPlan),
-	);
 	const is_floating_progress_dragging = $derived(
 		floating_progress_drag !== null,
 	);
@@ -128,47 +89,9 @@
 		return `left: ${floating_progress_position.x}px; top: ${floating_progress_position.y}px; bottom: auto; right: auto;`;
 	});
 
-	function are_same_keys(first: string[], second: string[]): boolean {
-		if (first.length !== second.length) {
-			return false;
-		}
-
-		return first.every((value, index) => value === second[index]);
-	}
-
-	$effect(() => {
-		shopping_item_statuses = {
-			...meal_plan_store.shoppingItemStatuses,
-		};
-	});
-
-	$effect(() => {
-		const next_keys = expanded_entries.map((entry) =>
-			build_planned_meal_key(entry),
-		);
-		const persisted_keys = selected_occurrence_keys.filter((key) =>
-			next_keys.includes(key),
-		);
-		const next_selected_keys =
-			persisted_keys.length > 0 || next_keys.length === 0
-				? persisted_keys
-				: [...next_keys];
-
-		if (are_same_keys(selected_occurrence_keys, next_selected_keys)) {
-			return;
-		}
-
-		selected_occurrence_keys = next_selected_keys;
-	});
-
 	function update_status(ingredient_id: string, event: Event) {
 		const next_status = (event.currentTarget as HTMLSelectElement)
 			.value as ShoppingItemStatus;
-
-		shopping_item_statuses = {
-			...shopping_item_statuses,
-			[ingredient_id]: next_status,
-		};
 
 		meal_plan_store.setShoppingItemStatus(ingredient_id, next_status);
 	}
@@ -205,52 +128,6 @@
 		items: { status?: ShoppingItemStatus }[];
 	}) {
 		return group.items.filter((item) => item.status === "pending").length;
-	}
-
-	function get_occurrence_key(entry: ExpandedMealPlanEntry): string {
-		return build_planned_meal_key(entry);
-	}
-
-	function is_occurrence_selected(entry: ExpandedMealPlanEntry): boolean {
-		return selected_occurrence_keys.includes(get_occurrence_key(entry));
-	}
-
-	function toggle_occurrence(entry: ExpandedMealPlanEntry) {
-		const occurrence_key = get_occurrence_key(entry);
-
-		selected_occurrence_keys = selected_occurrence_keys.includes(occurrence_key)
-			? selected_occurrence_keys.filter((key) => key !== occurrence_key)
-			: [...selected_occurrence_keys, occurrence_key];
-	}
-
-	function select_current_range() {
-		selected_occurrence_keys = expanded_entries.map((entry) =>
-			build_planned_meal_key(entry),
-		);
-	}
-
-	function clear_selected_meals() {
-		selected_occurrence_keys = [];
-	}
-
-	function get_recipe_name(recipe_id: string): string {
-		return (
-			meal_plan_store.recipes.find((recipe) => recipe.id === recipe_id)?.name ??
-			recipe_id
-		);
-	}
-
-	function get_meal_type_label(meal_type: MealType): string {
-		switch (meal_type) {
-			case "breakfast":
-				return m.planner_meal_type_breakfast();
-			case "lunch":
-				return m.planner_meal_type_lunch();
-			case "dinner":
-				return m.planner_meal_type_dinner();
-			case "snack":
-				return m.planner_meal_type_snack();
-		}
 	}
 
 	function get_widget_dimensions() {
@@ -342,12 +219,6 @@
 			floating_progress_position.y,
 		);
 	}
-
-	function select_plan(event: Event) {
-		meal_plan_store.selectPlan(
-			(event.currentTarget as HTMLSelectElement).value,
-		);
-	}
 </script>
 
 <svelte:window
@@ -386,112 +257,6 @@
 		{/snippet}
 	</PageHero>
 
-	<section class="plan-picker surface-panel">
-		<div class="plan-picker__copy">
-			<p>{m.planner_overview_period()}</p>
-			<strong title={meal_plan_store.mealPlan.name}
-				>{meal_plan_store.mealPlan.name}</strong
-			>
-			<span title={range_label}>{range_label}</span>
-		</div>
-		<div class="field-group">
-			<label for="shopping-plan">{m.planner_plan_name_label()}</label>
-			<select
-				id="shopping-plan"
-				value={meal_plan_store.activePlanId}
-				onchange={select_plan}
-			>
-				{#each available_plans as plan}
-					<option value={plan.id}>{format_plan_selection_label(plan)}</option>
-				{/each}
-			</select>
-		</div>
-	</section>
-
-	<div class="summary-grid">
-		<button
-			type="button"
-			class="summary-card surface-panel summary-button"
-			onclick={select_current_range}
-		>
-			<div class="summary-icon">
-				<Icon icon={calendarRangeOutline} width="20" height="20" />
-			</div>
-			<div>
-				<p>{m.planner_overview_period()}</p>
-				<strong>{range_label}</strong>
-			</div>
-		</button>
-		<article class="summary-card surface-panel">
-			<div class="summary-icon">
-				<Icon icon={cartOutline} width="20" height="20" />
-			</div>
-			<div>
-				<p>{m.profile_history_total_shopping_items()}</p>
-				<strong>{shopping_view.items.length}</strong>
-			</div>
-		</article>
-		<article class="summary-card surface-panel">
-			<div class="summary-icon">
-				<Icon icon={calendarTextOutline} width="20" height="20" />
-			</div>
-			<div>
-				<p>{m.planner_overview_occurrences()}</p>
-				<strong>{selected_occurrences.length}</strong>
-			</div>
-		</article>
-	</div>
-
-	<div class="meal-filter surface-panel">
-		<header class="filter-header">
-			<div>
-				<p class="eyebrow">{m.nav_planned_meals()}</p>
-				<h2>{m.planner_entries_title()}</h2>
-				<p>{selected_occurrences.length} / {expanded_entries.length}</p>
-			</div>
-			<div class="filter-actions">
-				<Button
-					variant="outline"
-					size="small"
-					round
-					onclick={select_current_range}
-				>
-					{m.planner_overview_period()}
-				</Button>
-				<Button
-					variant="outline"
-					size="small"
-					round
-					onclick={clear_selected_meals}
-				>
-					{m.planner_reset_form()}
-				</Button>
-			</div>
-		</header>
-
-		{#if expanded_entries.length === 0}
-			<p class="filter-empty">{m.shopping_empty()}</p>
-		{:else}
-			<div class="meal-grid">
-				{#each expanded_entries as entry}
-					<button
-						type="button"
-						class="meal-chip"
-						class:selected={is_occurrence_selected(entry)}
-						onclick={() => toggle_occurrence(entry)}
-						aria-pressed={is_occurrence_selected(entry)}
-					>
-						<span class="meal-date">{entry.occurrence_date}</span>
-						<strong>{get_recipe_name(entry.recipe_id)}</strong>
-						<span class="meal-meta"
-							>{get_meal_type_label(entry.meal_type)} · {entry.servings}</span
-						>
-					</button>
-				{/each}
-			</div>
-		{/if}
-	</div>
-
 	{#if shopping_view.items.length === 0}
 		<section class="empty-state surface-panel">
 			<p>{m.shopping_empty()}</p>
@@ -520,6 +285,10 @@
 				<div class="overview-copy">
 					<p class="eyebrow">{m.home_feature_shopping_eyebrow()}</p>
 					<h2>{m.home_feature_shopping_title()}</h2>
+					<p class="overview-meta">
+						<strong title={active_plan.name}>{active_plan.name}</strong>
+						<span title={range_label}>{range_label}</span>
+					</p>
 					<p>{m.home_feature_shopping_description()}</p>
 				</div>
 
@@ -713,188 +482,6 @@
 		}
 	}
 
-	.summary-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 0.85rem;
-
-		@include md {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
-	}
-
-	.plan-picker {
-		display: grid;
-		gap: 0.9rem;
-		padding: 1rem;
-		min-width: 0;
-		max-width: 100%;
-
-		@include md {
-			grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
-			align-items: end;
-		}
-	}
-
-	.plan-picker__copy {
-		display: grid;
-		gap: 0.2rem;
-		min-width: 0;
-
-		p,
-		span {
-			color: var(--text-muted);
-			min-width: 0;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-		}
-
-		strong {
-			display: block;
-			font-size: 1.05rem;
-			min-width: 0;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-		}
-	}
-
-	.summary-card {
-		display: flex;
-		align-items: center;
-		gap: 0.9rem;
-		padding: 1rem;
-
-		p {
-			font-size: 0.85rem;
-			color: var(--text-muted);
-		}
-
-		strong {
-			display: block;
-			margin-top: 0.15rem;
-			font-size: 1rem;
-		}
-	}
-
-	.summary-button {
-		width: 100%;
-		border: 1px solid var(--border);
-		background: none;
-		text-align: left;
-		cursor: pointer;
-		transition:
-			transform var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			border-color var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			box-shadow var(--motion-base, 180ms) var(--ease-emphasized, ease);
-
-		&:hover,
-		&:focus-visible {
-			transform: translateY(-2px);
-			border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
-			box-shadow: var(--card-shadow-hover);
-		}
-	}
-
-	.summary-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.75rem;
-		height: 2.75rem;
-		border-radius: 16px;
-		background: color-mix(in srgb, var(--primary) 10%, var(--surface));
-		color: var(--primary);
-		flex-shrink: 0;
-	}
-
-	.meal-filter {
-		display: grid;
-		gap: 1rem;
-		padding: 1rem;
-		border-radius: 24px;
-
-		@include md {
-			padding: 1.15rem;
-		}
-	}
-
-	.filter-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 1rem;
-		flex-wrap: wrap;
-
-		h2 {
-			font-size: 1.15rem;
-			line-height: 1.1;
-		}
-
-		p:last-child {
-			margin-top: 0.25rem;
-			color: var(--text-muted);
-			font-size: 0.9rem;
-		}
-	}
-
-	.filter-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.6rem;
-	}
-
-	.filter-empty {
-		color: var(--text-muted);
-	}
-
-	.meal-grid {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 0.75rem;
-
-		@include md {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-	}
-
-	.meal-chip {
-		display: grid;
-		justify-items: start;
-		gap: 0.25rem;
-		padding: 0.9rem 1rem;
-		border-radius: 20px;
-		border: 1px solid var(--border);
-		background: color-mix(in srgb, var(--surface) 95%, transparent);
-		color: var(--text);
-		text-align: left;
-		cursor: pointer;
-		transition:
-			transform var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			border-color var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			box-shadow var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			background-color var(--motion-base, 180ms) var(--ease-emphasized, ease);
-
-		&:hover,
-		&:focus-visible {
-			transform: translateY(-2px);
-			border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
-			box-shadow: var(--card-shadow-hover);
-		}
-
-		&.selected {
-			background: color-mix(in srgb, var(--primary) 10%, var(--surface));
-			border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
-		}
-	}
-
-	.meal-date,
-	.meal-meta {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-	}
-
 	.empty-state,
 	.overview-panel,
 	.group-panel {
@@ -954,6 +541,24 @@
 
 		p:last-child {
 			color: var(--text-muted);
+		}
+	}
+
+	.overview-meta {
+		display: grid;
+		gap: 0.2rem;
+
+		strong,
+		span {
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		span {
+			color: var(--text-muted);
+			font-size: 0.92rem;
 		}
 	}
 
