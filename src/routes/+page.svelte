@@ -8,7 +8,10 @@
 	import { localizeHref } from "$lib/paraglide/runtime";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import type { MealType } from "$lib/types/planning";
-	import type { BrazilRegion, Recipe } from "$lib/types/recipe";
+	import {
+		build_recipe_pool,
+		collect_plan_dates,
+	} from "$lib/utils/recipe-generation";
 
 	const meal_plan_store = useMealPlanStore();
 	const generation_meal_types: MealType[] = [
@@ -18,99 +21,8 @@
 		"dinner",
 		"dinner",
 	];
-	const brazil_region_by_timezone: Record<string, BrazilRegion> = {
-		"America/Rio_Branco": "north",
-		"America/Manaus": "north",
-		"America/Porto_Velho": "north",
-		"America/Boa_Vista": "north",
-		"America/Belem": "north",
-		"America/Araguaina": "north",
-		"America/Fortaleza": "northeast",
-		"America/Recife": "northeast",
-		"America/Maceio": "northeast",
-		"America/Bahia": "northeast",
-		"America/Cuiaba": "midwest",
-		"America/Campo_Grande": "midwest",
-		"America/Brasilia": "midwest",
-		"America/Sao_Paulo": "southeast",
-		"America/Rio_de_Janeiro": "southeast",
-		"America/Vitoria": "southeast",
-		"America/Curitiba": "south",
-	};
 
 	let is_generating = $state(false);
-
-	function inferRecipeLocation(): { country: string; region?: BrazilRegion } {
-		if (!browser) {
-			return { country: "Brazil" };
-		}
-
-		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-		return {
-			country: "Brazil",
-			region: brazil_region_by_timezone[timezone],
-		};
-	}
-
-	function shuffleRecipes(recipes: Recipe[]): Recipe[] {
-		const shuffled_recipes = [...recipes];
-
-		for (let index = shuffled_recipes.length - 1; index > 0; index -= 1) {
-			const random_index = Math.floor(Math.random() * (index + 1));
-			const current_recipe = shuffled_recipes[index];
-			shuffled_recipes[index] = shuffled_recipes[random_index];
-			shuffled_recipes[random_index] = current_recipe;
-		}
-
-		return shuffled_recipes;
-	}
-
-	function buildRecipePool(): Recipe[] {
-		const location = inferRecipeLocation();
-		const region_matches = mock_recipes.filter(
-			(recipe) =>
-				recipe.country === location.country &&
-				location.region !== undefined &&
-				recipe.region === location.region,
-		);
-		const country_generic = mock_recipes.filter(
-			(recipe) =>
-				recipe.country === location.country && recipe.region === undefined,
-		);
-		const country_fallback = mock_recipes.filter(
-			(recipe) =>
-				recipe.country === location.country &&
-				!region_matches.some((candidate) => candidate.id === recipe.id) &&
-				!country_generic.some((candidate) => candidate.id === recipe.id),
-		);
-
-		return shuffleRecipes([
-			...region_matches,
-			...country_generic,
-			...country_fallback,
-		]);
-	}
-
-	function collectPlanDates(start_date?: string, end_date?: string): string[] {
-		if (!start_date || !end_date) {
-			return [];
-		}
-
-		const dates: string[] = [];
-		const current_date = new Date(`${start_date}T12:00:00`);
-		const last_date = new Date(`${end_date}T12:00:00`);
-
-		while (
-			current_date <= last_date &&
-			dates.length < generation_meal_types.length
-		) {
-			dates.push(current_date.toISOString().slice(0, 10));
-			current_date.setDate(current_date.getDate() + 1);
-		}
-
-		return dates;
-	}
 
 	async function generateWeeklyRecipes() {
 		if (is_generating) {
@@ -121,14 +33,18 @@
 
 		try {
 			meal_plan_store.createPlan();
+			const timezone = browser
+				? Intl.DateTimeFormat().resolvedOptions().timeZone
+				: undefined;
 
-			const recipe_pool = buildRecipePool().slice(
+			const recipe_pool = build_recipe_pool(mock_recipes, timezone).slice(
 				0,
 				generation_meal_types.length,
 			);
-			const plan_dates = collectPlanDates(
+			const plan_dates = collect_plan_dates(
 				meal_plan_store.mealPlan.start_date,
 				meal_plan_store.mealPlan.end_date,
+				generation_meal_types.length,
 			);
 
 			for (const [index, recipe] of recipe_pool.entries()) {
