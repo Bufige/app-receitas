@@ -6,6 +6,7 @@
 	import { mock_recipes } from "$lib/mocks/recipes";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import type { MealType } from "$lib/types/planning";
 	import {
@@ -13,16 +14,11 @@
 		collect_plan_dates,
 	} from "$lib/utils/recipe-generation";
 
+	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
-	const generation_meal_types: MealType[] = [
-		"lunch",
-		"dinner",
-		"lunch",
-		"dinner",
-		"lunch",
-		"dinner",
-		"lunch",
-	];
+	const weekly_meal_types: MealType[] = ["lunch", "dinner"];
+	const weekly_day_count = 7;
+	const default_generated_servings = 2;
 
 	let is_generating = $state(false);
 
@@ -34,36 +30,53 @@
 		is_generating = true;
 
 		try {
-			meal_plan_store.createPlan();
+			const default_home_household =
+				household_store.profiles.find((profile) => profile.kind === "home") ??
+				household_store.profile;
+
+			household_store.selectHousehold(default_home_household.id);
+			household_store.update(
+				{ default_servings: default_generated_servings },
+				default_home_household.id,
+			);
+			meal_plan_store.createPlan(default_home_household.id);
 			const timezone = browser
 				? Intl.DateTimeFormat().resolvedOptions().timeZone
 				: undefined;
 
-			const recipe_pool = build_recipe_pool(mock_recipes, timezone).slice(
-				0,
-				generation_meal_types.length,
-			);
+			const recipe_pool = build_recipe_pool(mock_recipes, timezone);
 			const plan_dates = collect_plan_dates(
 				meal_plan_store.mealPlan.start_date,
 				meal_plan_store.mealPlan.end_date,
-				generation_meal_types.length,
+				weekly_day_count,
 			);
 
-			for (const [index, recipe] of recipe_pool.entries()) {
-				const plan_date = plan_dates[index];
-
-				if (!plan_date) {
-					break;
-				}
-
-				meal_plan_store.addEntry({
-					recipe_id: recipe.id,
-					date: plan_date,
-					meal_type: generation_meal_types[index] ?? "dinner",
-				});
+			if (recipe_pool.length === 0) {
+				await goto(localizeHref("/planner/calendar"));
+				return;
 			}
 
-			await goto(localizeHref("/planner"));
+			let recipe_index = 0;
+
+			for (const plan_date of plan_dates) {
+				for (const meal_type of weekly_meal_types) {
+					const recipe = recipe_pool[recipe_index % recipe_pool.length];
+
+					if (!recipe) {
+						continue;
+					}
+
+					meal_plan_store.addEntry({
+						recipe_id: recipe.id,
+						date: plan_date,
+						meal_type,
+						servings: default_generated_servings,
+					});
+					recipe_index += 1;
+				}
+			}
+
+			await goto(localizeHref("/planner/calendar"));
 		} finally {
 			is_generating = false;
 		}

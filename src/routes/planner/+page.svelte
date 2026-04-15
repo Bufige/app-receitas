@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import Icon from "@iconify/svelte";
-	import calendarMonthOutline from "@iconify-icons/mdi/calendar-month-outline";
 	import cogOutline from "@iconify-icons/mdi/cog-outline";
 	import formatListBulleted from "@iconify-icons/mdi/format-list-bulleted";
 	import silverwareForkKnife from "@iconify-icons/mdi/silverware-fork-knife";
@@ -11,7 +11,6 @@
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import { announce } from "$lib/utils/announce";
 	import type {
-		ExpandedMealPlanEntry,
 		MealPlanEntry,
 		MealType,
 		PlanningPreset,
@@ -22,14 +21,21 @@
 	import { getLocale, localizeHref } from "$lib/paraglide/runtime";
 	import type { PlanWindowValidationResult } from "$lib/utils/planning";
 	import {
-		expand_meal_plan_entries,
-		format_iso_date,
 		format_plan_range_label,
 		format_plan_selection_label,
-		parse_iso_date,
 	} from "$lib/utils/planning";
 
-	type PlannerTab = "setup" | "meal" | "overview" | "entries";
+	type PlannerTab = "setup" | "meal" | "entries";
+
+	function get_initial_planner_tab(): PlannerTab {
+		const tab = page.url.searchParams.get("tab");
+
+		if (tab === "setup" || tab === "meal" || tab === "entries") {
+			return tab;
+		}
+
+		return "setup";
+	}
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
@@ -53,7 +59,7 @@
 	let editing_entry_id = $state<string | null>(null);
 	let editing_series_id = $state<string | null>(null);
 	let last_active_plan_id = $state(meal_plan_store.activePlanId);
-	let active_tab = $state<PlannerTab>("setup");
+	let active_tab = $state<PlannerTab>(get_initial_planner_tab());
 	let planner_feedback = $state<string | null>(null);
 
 	function localized_fallback(english: string, portuguese: string): string {
@@ -192,11 +198,6 @@
 			label: () => m.planner_entries_title(),
 			icon: formatListBulleted,
 		},
-		{
-			id: "overview" as const,
-			label: () => m.planner_schedule_preview_title(),
-			icon: calendarMonthOutline,
-		},
 	];
 
 	const available_households = $derived(household_store.profiles);
@@ -204,121 +205,28 @@
 	const has_available_plans = $derived.by(() => available_plans.length > 0);
 	const entries = $derived(meal_plan_store.mealPlan.entries);
 	const conflicts = $derived(meal_plan_store.conflicts);
-	const expanded_entries = $derived.by(() =>
-		expand_meal_plan_entries(
-			meal_plan_store.mealPlan.entries,
-			meal_plan_store.mealPlan.start_date,
-			meal_plan_store.mealPlan.end_date,
-		),
-	);
 	const recurring_series_count = $derived.by(
 		() => new Set(entries.map((entry) => entry.series_id).filter(Boolean)).size,
 	);
 	const plan_range_label = $derived.by(() =>
 		format_plan_range_label(meal_plan_store.mealPlan),
 	);
-	const active_plan_summary = $derived.by(
-		() =>
-			`${plan_range_label} · ${expanded_entries.length} ${m.planner_overview_occurrences().toLowerCase()}`,
-	);
-	const weekday_headers = $derived.by(() => {
-		const formatter = new Intl.DateTimeFormat(undefined, {
-			weekday: "short",
-		});
 
-		return Array.from({ length: 7 }, (_, index) => {
-			const date = new Date(2024, 0, 1 + index, 12);
-			return formatter.format(date);
-		});
-	});
+	$effect(() => {
+		const tab_from_query = page.url.searchParams.get("tab");
 
-	type OverviewDay = {
-		date: string;
-		date_label: string;
-		weekday_label: string;
-		entry_count: number;
-		slots: Record<MealType, ExpandedMealPlanEntry[]>;
-	};
-
-	const overview_days = $derived.by(() => {
-		const grouped = new Map<
-			string,
-			Record<MealType, ExpandedMealPlanEntry[]>
-		>();
-
-		for (const entry of expanded_entries) {
-			const slots = grouped.get(entry.occurrence_date) ?? {
-				breakfast: [],
-				lunch: [],
-				dinner: [],
-				snack: [],
-			};
-
-			slots[entry.meal_type].push(entry);
-			grouped.set(entry.occurrence_date, slots);
+		if (tab_from_query === "overview") {
+			goto(localizeHref("/planner/calendar"));
+			return;
 		}
 
-		const start_date = meal_plan_store.mealPlan.start_date;
-		const end_date = meal_plan_store.mealPlan.end_date;
-
-		if (!start_date || !end_date) {
-			return [] as OverviewDay[];
+		if (
+			tab_from_query === "setup" ||
+			tab_from_query === "meal" ||
+			tab_from_query === "entries"
+		) {
+			active_tab = tab_from_query;
 		}
-
-		const date_formatter = new Intl.DateTimeFormat(undefined, {
-			month: "short",
-			day: "numeric",
-		});
-		const weekday_formatter = new Intl.DateTimeFormat(undefined, {
-			weekday: "short",
-		});
-		const days: OverviewDay[] = [];
-		const current_date = parse_iso_date(start_date);
-		const range_end = parse_iso_date(end_date);
-
-		while (current_date <= range_end) {
-			const iso_date = format_iso_date(current_date);
-			const slots = grouped.get(iso_date) ?? {
-				breakfast: [],
-				lunch: [],
-				dinner: [],
-				snack: [],
-			};
-
-			days.push({
-				date: iso_date,
-				date_label: date_formatter.format(current_date),
-				weekday_label: weekday_formatter.format(current_date),
-				entry_count: meal_types.reduce(
-					(total, meal_type) => total + slots[meal_type].length,
-					0,
-				),
-				slots,
-			});
-
-			current_date.setDate(current_date.getDate() + 1);
-		}
-
-		return days;
-	});
-
-	const overview_cells = $derived.by(() => {
-		if (overview_days.length === 0) {
-			return [] as Array<OverviewDay | null>;
-		}
-
-		const first_day = parse_iso_date(overview_days[0].date);
-		const leading_empty_days = (first_day.getDay() + 6) % 7;
-		const cells: Array<OverviewDay | null> = [
-			...Array.from({ length: leading_empty_days }, () => null),
-			...overview_days,
-		];
-		const trailing_empty_days = (7 - (cells.length % 7)) % 7;
-
-		return [
-			...cells,
-			...Array.from({ length: trailing_empty_days }, () => null),
-		];
 	});
 
 	$effect(() => {
@@ -628,11 +536,20 @@
 					<span>{tab.label()}</span>
 					{#if tab.id === "entries"}
 						<small>{has_available_plans ? entries.length : 0}</small>
-					{:else if tab.id === "overview"}
-						<small>{has_available_plans ? expanded_entries.length : 0}</small>
 					{/if}
 				</button>
 			{/each}
+		</div>
+
+		<div class="planner-tabs__actions">
+			<Button
+				variant="outline"
+				size="medium"
+				round
+				href={localizeHref("/planner/calendar")}
+			>
+				{m.planner_schedule_preview_title()}
+			</Button>
 		</div>
 
 		{#if active_tab === "setup"}
@@ -947,98 +864,6 @@
 					</Button>
 				</div>
 			</div>
-		{:else if active_tab === "overview"}
-			<div
-				class="panel planner-panel overview-panel"
-				role="tabpanel"
-				id="planner-panel-overview"
-				aria-labelledby="planner-tab-overview"
-			>
-				<div class="section-heading compact">
-					<h2>{m.planner_schedule_preview_title()}</h2>
-					<p>{m.planner_schedule_preview_subtitle()}</p>
-				</div>
-
-				{#if overview_days.length === 0}
-					<div class="empty-panel">
-						<p class="empty">{m.planner_preview_empty()}</p>
-						<Button
-							variant="primary"
-							size="medium"
-							round
-							onclick={() => open_tab("meal")}
-						>
-							{m.planner_add_entry()}
-						</Button>
-					</div>
-				{:else}
-					<div class="overview-scroll">
-						<div class="overview-weekday-row" aria-hidden="true">
-							{#each weekday_headers as header}
-								<div class="overview-weekday-cell">{header}</div>
-							{/each}
-						</div>
-
-						<div class="overview-grid">
-							{#each overview_cells as day}
-								{#if day}
-									<article
-										class="overview-day"
-										class:has-meals={day.entry_count > 0}
-									>
-										<header class="overview-day-header">
-											<div>
-												<p class="overview-weekday">{day.weekday_label}</p>
-												<h3>{day.date_label}</h3>
-											</div>
-											{#if day.entry_count > 0}
-												<span class="overview-count">{day.entry_count}</span>
-											{/if}
-										</header>
-
-										{#if day.entry_count === 0}
-											<p class="overview-empty">
-												{m.planned_meals_day_empty()}
-											</p>
-										{:else}
-											<div class="overview-slot-list">
-												{#each meal_types as meal_type}
-													{#if day.slots[meal_type].length > 0}
-														<section class="overview-slot">
-															<span class="slot-label"
-																>{get_meal_type_label(meal_type)}</span
-															>
-															<div class="slot-content">
-																{#each day.slots[meal_type] as occurrence}
-																	<a
-																		class="slot-chip"
-																		href={localizeHref(
-																			`/recipes/${get_recipe_slug(occurrence.recipe_id) ?? ""}`,
-																		)}
-																	>
-																		<span
-																			>{get_recipe_name(
-																				occurrence.recipe_id,
-																			)}</span
-																		>
-																		<small>{occurrence.servings}</small>
-																	</a>
-																{/each}
-															</div>
-														</section>
-													{/if}
-												{/each}
-											</div>
-										{/if}
-									</article>
-								{:else}
-									<div class="overview-placeholder" aria-hidden="true"></div>
-								{/if}
-							{/each}
-						</div>
-					</div>
-				{/if}
-			</div>
 		{:else}
 			<div
 				class="panel planner-panel entries-panel"
@@ -1228,6 +1053,21 @@
 		}
 	}
 
+	.planner-tabs__actions {
+		display: flex;
+		justify-content: flex-start;
+		padding: 0 0.5rem;
+
+		:global(.btn) {
+			width: 100%;
+
+			@include md {
+				width: auto;
+				min-width: 14rem;
+			}
+		}
+	}
+
 	.panel {
 		padding: 1rem;
 		border-radius: 24px;
@@ -1273,7 +1113,6 @@
 
 	.settings-panel,
 	.form-panel,
-	.overview-panel,
 	.entries-panel,
 	.empty-panel {
 		display: grid;
@@ -1354,139 +1193,6 @@
 
 	.empty-panel {
 		justify-items: start;
-	}
-
-	.overview-scroll {
-		overflow-x: auto;
-		padding-bottom: 0.2rem;
-	}
-
-	.overview-weekday-row,
-	.overview-grid {
-		display: grid;
-		grid-template-columns: repeat(7, minmax(10rem, 1fr));
-		min-width: 70rem;
-	}
-
-	.overview-weekday-row {
-		gap: 0.65rem;
-		margin-bottom: 0.65rem;
-	}
-
-	.overview-weekday-cell {
-		padding: 0 0.35rem;
-		font-size: 0.78rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		color: var(--text-muted);
-	}
-
-	.overview-grid {
-		gap: 0.65rem;
-	}
-
-	.overview-day,
-	.overview-placeholder {
-		display: grid;
-		align-content: start;
-		min-height: 14rem;
-		padding: 0.8rem;
-		border: 1px solid var(--border);
-		border-radius: 18px;
-		background-color: color-mix(in srgb, var(--surface) 95%, transparent);
-	}
-
-	.overview-placeholder {
-		background-color: color-mix(in srgb, var(--surface) 65%, transparent);
-		border-style: dashed;
-		opacity: 0.45;
-	}
-
-	.overview-day {
-		gap: 0.75rem;
-
-		&.has-meals {
-			border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
-		}
-
-		h3 {
-			font-size: 1rem;
-		}
-	}
-
-	.overview-day-header {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 0.75rem;
-	}
-
-	.overview-weekday {
-		font-size: 0.76rem;
-		font-weight: 700;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-		color: var(--text-muted);
-	}
-
-	.overview-count {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 1.8rem;
-		height: 1.8rem;
-		padding: 0 0.45rem;
-		border-radius: 999px;
-		background-color: color-mix(in srgb, var(--primary) 14%, transparent);
-		color: var(--primary);
-		font-size: 0.8rem;
-		font-weight: 700;
-	}
-
-	.overview-empty {
-		font-size: 0.85rem;
-		color: var(--text-muted);
-	}
-
-	.overview-slot-list {
-		display: grid;
-		gap: 0.65rem;
-	}
-
-	.overview-slot {
-		display: grid;
-		gap: 0.35rem;
-	}
-
-	.slot-label {
-		font-size: 0.8rem;
-		font-weight: 700;
-		color: var(--text-muted);
-	}
-
-	.slot-content {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.45rem;
-	}
-
-	.slot-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.45rem;
-		padding: 0.45rem 0.7rem;
-		border-radius: 999px;
-		border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
-		background-color: color-mix(in srgb, var(--surface) 94%, transparent);
-		font-size: 0.82rem;
-		font-weight: 600;
-		color: var(--text);
-
-		small {
-			color: var(--primary);
-			font-weight: 700;
-		}
 	}
 
 	.conflicts {
