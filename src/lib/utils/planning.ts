@@ -129,6 +129,25 @@ export function get_preset_range(
 	}
 }
 
+export function get_next_two_weeks_range(reference_date = new Date()): {
+	start_date: string;
+	end_date: string;
+} {
+	const normalized_reference = new Date(
+		reference_date.getFullYear(),
+		reference_date.getMonth(),
+		reference_date.getDate(),
+		12,
+	);
+	const range_end = clone_date(normalized_reference);
+	range_end.setDate(range_end.getDate() + 13);
+
+	return {
+		start_date: format_iso_date(normalized_reference),
+		end_date: format_iso_date(range_end),
+	};
+}
+
 export function format_plan_range_label(plan: {
 	start_date?: MealPlan["start_date"];
 	end_date?: MealPlan["end_date"];

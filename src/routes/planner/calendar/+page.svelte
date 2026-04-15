@@ -1,19 +1,34 @@
 <script lang="ts">
+	import { browser } from "$app/environment";
 	import Button from "$lib/components/ui/Button/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
-	import { localizeHref } from "$lib/paraglide/runtime";
+	import { getLocale, localizeHref } from "$lib/paraglide/runtime";
+	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
+	import { announce } from "$lib/utils/announce";
+	import {
+		build_recipe_pool,
+		collect_plan_dates,
+	} from "$lib/utils/recipe-generation";
 	import type { ExpandedMealPlanEntry, MealType } from "$lib/types/planning";
 	import {
 		expand_meal_plan_entries,
 		format_iso_date,
 		format_plan_range_label,
+		get_next_two_weeks_range,
+		get_preset_range,
 		parse_iso_date,
 	} from "$lib/utils/planning";
 
+	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
+	const message_registry = m as Record<string, unknown>;
 	const meal_types: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
+	const generated_meal_types: MealType[] = ["lunch", "dinner"];
+
+	let is_regenerating = $state<"month" | "two_weeks" | null>(null);
+	let calendar_feedback = $state<string | null>(null);
 
 	type OverviewDay = {
 		date: string;
@@ -127,6 +142,201 @@
 		];
 	});
 
+	function localized_fallback(english: string, portuguese: string): string {
+		return getLocale() === "pt-br" ? portuguese : english;
+	}
+
+	function call_optional_message<TInputs>(
+		candidate: unknown,
+		fallback: string,
+		inputs?: TInputs,
+	): string {
+		if (typeof candidate !== "function") {
+			return fallback;
+		}
+
+		try {
+			return inputs === undefined
+				? (candidate as () => string)()
+				: (candidate as (input: TInputs) => string)(inputs);
+		} catch {
+			return fallback;
+		}
+	}
+
+	function get_optional_message(key: string, fallback: string): string {
+		return call_optional_message(message_registry[key], fallback);
+	}
+
+	function calendar_generate_month_label(): string {
+		return get_optional_message(
+			"planner_calendar_generate_month",
+			localized_fallback(
+				"Generate plan for the month",
+				"Gerar plano para o mês",
+			),
+		);
+	}
+
+	function calendar_generate_two_weeks_label(): string {
+		return get_optional_message(
+			"planner_calendar_generate_two_weeks",
+			localized_fallback(
+				"Generate plan for the next two weeks",
+				"Gerar plano para as próximas duas semanas",
+			),
+		);
+	}
+
+	function calendar_generate_hint(): string {
+		return get_optional_message(
+			"planner_calendar_generate_hint",
+			localized_fallback(
+				"These actions replace the current plan range and refill every day with lunch and dinner.",
+				"Essas ações substituem o intervalo do plano atual e preenchem todos os dias com almoço e jantar.",
+			),
+		);
+	}
+
+	function calendar_generate_month_feedback(): string {
+		return get_optional_message(
+			"planner_calendar_generate_month_feedback",
+			localized_fallback(
+				"Current plan regenerated for the month.",
+				"Plano atual regenerado para o mês.",
+			),
+		);
+	}
+
+	function calendar_generate_two_weeks_feedback(): string {
+		return get_optional_message(
+			"planner_calendar_generate_two_weeks_feedback",
+			localized_fallback(
+				"Current plan regenerated for the next two weeks.",
+				"Plano atual regenerado para as próximas duas semanas.",
+			),
+		);
+	}
+
+	function calendar_generate_empty_feedback(): string {
+		return get_optional_message(
+			"planner_calendar_generate_empty_feedback",
+			localized_fallback(
+				"No recipes are available to regenerate this plan right now.",
+				"Nenhuma receita está disponível para regenerar este plano agora.",
+			),
+		);
+	}
+
+	function show_calendar_feedback(message: string) {
+		calendar_feedback = message;
+		announce(message);
+	}
+
+	function clear_calendar_feedback() {
+		calendar_feedback = null;
+	}
+
+	function get_browser_timezone(): string | undefined {
+		return browser
+			? Intl.DateTimeFormat().resolvedOptions().timeZone
+			: undefined;
+	}
+
+	function replace_current_plan_with_generated_meals(range: {
+		start_date: string;
+		end_date: string;
+		period: "week" | "month";
+		preset?: "this_month";
+		feedback_message: string;
+	}) {
+		clear_calendar_feedback();
+
+		meal_plan_store.setPeriod(range.period);
+
+		if (range.preset === "this_month") {
+			meal_plan_store.setPlanningPreset(range.preset);
+		} else {
+			meal_plan_store.setCustomRange(range.start_date, range.end_date);
+		}
+
+		meal_plan_store.clearPlan();
+
+		const recipe_pool = build_recipe_pool(
+			meal_plan_store.recipes,
+			get_browser_timezone(),
+		);
+		const plan_dates = collect_plan_dates(
+			meal_plan_store.mealPlan.start_date,
+			meal_plan_store.mealPlan.end_date,
+			Number.MAX_SAFE_INTEGER,
+		);
+
+		if (recipe_pool.length === 0 || plan_dates.length === 0) {
+			show_calendar_feedback(calendar_generate_empty_feedback());
+			return;
+		}
+
+		let recipe_index = 0;
+
+		for (const plan_date of plan_dates) {
+			for (const meal_type of generated_meal_types) {
+				const recipe = recipe_pool[recipe_index % recipe_pool.length];
+
+				if (!recipe) {
+					continue;
+				}
+
+				meal_plan_store.addEntry({
+					recipe_id: recipe.id,
+					date: plan_date,
+					meal_type,
+					servings: household_store.profile.default_servings,
+				});
+				recipe_index += 1;
+			}
+		}
+
+		show_calendar_feedback(range.feedback_message);
+	}
+
+	function regenerate_month_plan() {
+		if (is_regenerating) {
+			return;
+		}
+
+		is_regenerating = "month";
+
+		try {
+			replace_current_plan_with_generated_meals({
+				...get_preset_range("this_month"),
+				period: "month",
+				preset: "this_month",
+				feedback_message: calendar_generate_month_feedback(),
+			});
+		} finally {
+			is_regenerating = null;
+		}
+	}
+
+	function regenerate_next_two_weeks_plan() {
+		if (is_regenerating) {
+			return;
+		}
+
+		is_regenerating = "two_weeks";
+
+		try {
+			replace_current_plan_with_generated_meals({
+				...get_next_two_weeks_range(),
+				period: "week",
+				feedback_message: calendar_generate_two_weeks_feedback(),
+			});
+		} finally {
+			is_regenerating = null;
+		}
+	}
+
 	function get_recipe_name(recipe_id: string): string {
 		return (
 			meal_plan_store.recipes.find((recipe) => recipe.id === recipe_id)?.name ??
@@ -160,6 +370,12 @@
 
 <section class="page">
 	<div class="calendar-page surface-panel">
+		{#if calendar_feedback}
+			<div class="calendar-feedback" role="status" aria-live="polite">
+				<p>{calendar_feedback}</p>
+			</div>
+		{/if}
+
 		<header class="calendar-header">
 			<div class="section-heading">
 				<p class="eyebrow">{meal_plan_store.mealPlan.name}</p>
@@ -169,6 +385,26 @@
 			</div>
 
 			<div class="calendar-actions">
+				<Button
+					variant="secondary"
+					size="medium"
+					round
+					loading={is_regenerating === "month"}
+					disabled={is_regenerating !== null}
+					onclick={regenerate_month_plan}
+				>
+					{calendar_generate_month_label()}
+				</Button>
+				<Button
+					variant="secondary"
+					size="medium"
+					round
+					loading={is_regenerating === "two_weeks"}
+					disabled={is_regenerating !== null}
+					onclick={regenerate_next_two_weeks_plan}
+				>
+					{calendar_generate_two_weeks_label()}
+				</Button>
 				<Button
 					variant="outline"
 					size="medium"
@@ -187,6 +423,8 @@
 				</Button>
 			</div>
 		</header>
+
+		<p class="calendar-hint">{calendar_generate_hint()}</p>
 
 		{#if overview_days.length === 0}
 			<div class="empty-panel">
@@ -275,6 +513,14 @@
 		min-width: 0;
 	}
 
+	.calendar-feedback {
+		padding: 0.9rem 1rem;
+		border-radius: 18px;
+		border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+		background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+		color: var(--text);
+	}
+
 	.calendar-page,
 	.empty-panel {
 		display: grid;
@@ -336,6 +582,10 @@
 			justify-content: end;
 		}
 
+		@include lg {
+			grid-template-columns: repeat(4, minmax(0, auto));
+		}
+
 		:global(.btn) {
 			width: 100%;
 
@@ -346,12 +596,13 @@
 		}
 	}
 
-	.empty-panel {
-		justify-items: start;
-	}
-
+	.calendar-hint,
 	.empty {
 		color: var(--text-muted);
+	}
+
+	.empty-panel {
+		justify-items: start;
 	}
 
 	.overview-scroll {
