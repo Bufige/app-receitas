@@ -1,4 +1,6 @@
 <script lang="ts">
+	import cartOutline from "@iconify-icons/mdi/cart-outline";
+	import Icon from "@iconify/svelte";
 	import { browser } from "$app/environment";
 	import Button from "$lib/components/ui/Button/index.svelte";
 	import PageHero from "$lib/components/ui/PageHero/index.svelte";
@@ -26,8 +28,9 @@
 	const meal_plan_store = useMealPlanStore();
 	const meal_types: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
 	const generated_meal_types: MealType[] = ["lunch", "dinner"];
+	type CalendarRangeAction = "month" | "two_weeks" | "week";
 
-	let is_regenerating = $state<"month" | "two_weeks" | null>(null);
+	let is_regenerating = $state<CalendarRangeAction | null>(null);
 	let calendar_feedback = $state<string | null>(null);
 
 	type OverviewDay = {
@@ -141,6 +144,98 @@
 			...Array.from({ length: trailing_empty_days }, () => null),
 		];
 	});
+	const current_range_action = $derived.by<CalendarRangeAction>(() =>
+		get_current_range_action(
+			meal_plan_store.mealPlan.start_date,
+			meal_plan_store.mealPlan.end_date,
+		),
+	);
+	const available_calendar_actions = $derived.by<
+		Array<{
+			key: CalendarRangeAction;
+			label: string;
+			loading: boolean;
+			handler: () => void;
+		}>
+	>(() => {
+		const actions = [
+			{
+				key: "month" as const,
+				label: m.planner_calendar_generate_month(),
+				loading: is_regenerating === "month",
+				handler: regenerate_month_plan,
+			},
+			{
+				key: "two_weeks" as const,
+				label: m.planner_calendar_generate_two_weeks(),
+				loading: is_regenerating === "two_weeks",
+				handler: regenerate_next_two_weeks_plan,
+			},
+			{
+				key: "week" as const,
+				label: m.planner_calendar_generate_week(),
+				loading: is_regenerating === "week",
+				handler: regenerate_this_week,
+			},
+		];
+
+		return actions.filter((action) => action.key !== current_range_action);
+	});
+
+	function get_range_day_count(start_date: string, end_date: string) {
+		const start = parse_iso_date(start_date);
+		const end = parse_iso_date(end_date);
+		const milliseconds_per_day = 1000 * 60 * 60 * 24;
+
+		return (
+			Math.round((end.getTime() - start.getTime()) / milliseconds_per_day) + 1
+		);
+	}
+
+	function get_current_range_action(
+		start_date?: string,
+		end_date?: string,
+	): CalendarRangeAction {
+		if (!start_date || !end_date) {
+			return "week";
+		}
+
+		const this_month = get_preset_range("this_month");
+		if (
+			start_date === this_month.start_date &&
+			end_date === this_month.end_date
+		) {
+			return "month";
+		}
+
+		const this_week = get_preset_range("this_week");
+		if (
+			start_date === this_week.start_date &&
+			end_date === this_week.end_date
+		) {
+			return "week";
+		}
+
+		const next_two_weeks = get_next_two_weeks_range();
+		if (
+			start_date === next_two_weeks.start_date &&
+			end_date === next_two_weeks.end_date
+		) {
+			return "two_weeks";
+		}
+
+		const day_count = get_range_day_count(start_date, end_date);
+
+		if (day_count <= 7) {
+			return "week";
+		}
+
+		if (day_count <= 15) {
+			return "two_weeks";
+		}
+
+		return "month";
+	}
 
 	function show_calendar_feedback(message: string) {
 		calendar_feedback = message;
@@ -161,19 +256,18 @@
 		start_date: string;
 		end_date: string;
 		period: "week" | "month";
-		preset?: "this_month";
+		preset?: "this_month" | "this_week";
 		feedback_message: string;
 	}) {
 		clear_calendar_feedback();
 
 		meal_plan_store.setPeriod(range.period);
 
-		if (range.preset === "this_month") {
+		if (range.preset) {
 			meal_plan_store.setPlanningPreset(range.preset);
 		} else {
 			meal_plan_store.setCustomRange(range.start_date, range.end_date);
 		}
-
 		meal_plan_store.clearPlan();
 
 		const recipe_pool = build_recipe_pool(
@@ -212,6 +306,25 @@
 		}
 
 		show_calendar_feedback(range.feedback_message);
+	}
+
+	function regenerate_this_week() {
+		if (is_regenerating) {
+			return;
+		}
+
+		is_regenerating = "week";
+
+		try {
+			replace_current_plan_with_generated_meals({
+				...get_preset_range("this_week"),
+				period: "week",
+				preset: "this_week",
+				feedback_message: m.planner_calendar_generate_week_feedback(),
+			});
+		} finally {
+			is_regenerating = null;
+		}
 	}
 
 	function regenerate_month_plan() {
@@ -295,6 +408,7 @@
 					round
 					href={localizeHref("/shopping-list")}
 				>
+					<Icon icon={cartOutline} width="18" height="18" aria-hidden="true" />
 					{m.nav_shopping_list()}
 				</Button>
 			</div>
@@ -317,42 +431,18 @@
 
 		<header class="calendar-header">
 			<div class="calendar-actions">
-				<Button
-					variant="secondary"
-					size="medium"
-					round
-					loading={is_regenerating === "month"}
-					disabled={is_regenerating !== null}
-					onclick={regenerate_month_plan}
-				>
-					{m.planner_calendar_generate_month()}
-				</Button>
-				<Button
-					variant="secondary"
-					size="medium"
-					round
-					loading={is_regenerating === "two_weeks"}
-					disabled={is_regenerating !== null}
-					onclick={regenerate_next_two_weeks_plan}
-				>
-					{m.planner_calendar_generate_two_weeks()}
-				</Button>
-				<Button
-					variant="outline"
-					size="medium"
-					round
-					href={localizeHref("/planner?tab=setup")}
-				>
-					{m.planner_settings_title()}
-				</Button>
-				<Button
-					variant="outline"
-					size="medium"
-					round
-					href={localizeHref("/planner?tab=meal")}
-				>
-					{m.planner_add_entry()}
-				</Button>
+				{#each available_calendar_actions as action (action.key)}
+					<Button
+						variant="secondary"
+						size="medium"
+						round
+						loading={action.loading}
+						disabled={is_regenerating !== null}
+						onclick={action.handler}
+					>
+						{action.label}
+					</Button>
+				{/each}
 			</div>
 		</header>
 
@@ -515,7 +605,7 @@
 		}
 
 		@include lg {
-			grid-template-columns: repeat(4, minmax(0, auto));
+			grid-template-columns: repeat(2, minmax(0, auto));
 		}
 
 		:global(.btn) {
