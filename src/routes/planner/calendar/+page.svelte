@@ -3,7 +3,7 @@
 	import Button from "$lib/components/ui/Button/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
-	import { getLocale, localizeHref } from "$lib/paraglide/runtime";
+	import { localizeHref } from "$lib/paraglide/runtime";
 	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import { announce } from "$lib/utils/announce";
@@ -23,7 +23,6 @@
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
-	const message_registry = m as Record<string, unknown>;
 	const meal_types: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
 	const generated_meal_types: MealType[] = ["lunch", "dinner"];
 
@@ -142,92 +141,6 @@
 		];
 	});
 
-	function localized_fallback(english: string, portuguese: string): string {
-		return getLocale() === "pt-br" ? portuguese : english;
-	}
-
-	function call_optional_message<TInputs>(
-		candidate: unknown,
-		fallback: string,
-		inputs?: TInputs,
-	): string {
-		if (typeof candidate !== "function") {
-			return fallback;
-		}
-
-		try {
-			return inputs === undefined
-				? (candidate as () => string)()
-				: (candidate as (input: TInputs) => string)(inputs);
-		} catch {
-			return fallback;
-		}
-	}
-
-	function get_optional_message(key: string, fallback: string): string {
-		return call_optional_message(message_registry[key], fallback);
-	}
-
-	function calendar_generate_month_label(): string {
-		return get_optional_message(
-			"planner_calendar_generate_month",
-			localized_fallback(
-				"Generate plan for the month",
-				"Gerar plano para o mês",
-			),
-		);
-	}
-
-	function calendar_generate_two_weeks_label(): string {
-		return get_optional_message(
-			"planner_calendar_generate_two_weeks",
-			localized_fallback(
-				"Generate plan for the next two weeks",
-				"Gerar plano para as próximas duas semanas",
-			),
-		);
-	}
-
-	function calendar_generate_hint(): string {
-		return get_optional_message(
-			"planner_calendar_generate_hint",
-			localized_fallback(
-				"These actions replace the current plan range and refill every day with lunch and dinner.",
-				"Essas ações substituem o intervalo do plano atual e preenchem todos os dias com almoço e jantar.",
-			),
-		);
-	}
-
-	function calendar_generate_month_feedback(): string {
-		return get_optional_message(
-			"planner_calendar_generate_month_feedback",
-			localized_fallback(
-				"Current plan regenerated for the month.",
-				"Plano atual regenerado para o mês.",
-			),
-		);
-	}
-
-	function calendar_generate_two_weeks_feedback(): string {
-		return get_optional_message(
-			"planner_calendar_generate_two_weeks_feedback",
-			localized_fallback(
-				"Current plan regenerated for the next two weeks.",
-				"Plano atual regenerado para as próximas duas semanas.",
-			),
-		);
-	}
-
-	function calendar_generate_empty_feedback(): string {
-		return get_optional_message(
-			"planner_calendar_generate_empty_feedback",
-			localized_fallback(
-				"No recipes are available to regenerate this plan right now.",
-				"Nenhuma receita está disponível para regenerar este plano agora.",
-			),
-		);
-	}
-
 	function show_calendar_feedback(message: string) {
 		calendar_feedback = message;
 		announce(message);
@@ -273,7 +186,7 @@
 		);
 
 		if (recipe_pool.length === 0 || plan_dates.length === 0) {
-			show_calendar_feedback(calendar_generate_empty_feedback());
+			show_calendar_feedback(m.planner_calendar_generate_empty_feedback());
 			return;
 		}
 
@@ -312,7 +225,7 @@
 				...get_preset_range("this_month"),
 				period: "month",
 				preset: "this_month",
-				feedback_message: calendar_generate_month_feedback(),
+				feedback_message: m.planner_calendar_generate_month_feedback(),
 			});
 		} finally {
 			is_regenerating = null;
@@ -330,7 +243,7 @@
 			replace_current_plan_with_generated_meals({
 				...get_next_two_weeks_range(),
 				period: "week",
-				feedback_message: calendar_generate_two_weeks_feedback(),
+				feedback_message: m.planner_calendar_generate_two_weeks_feedback(),
 			});
 		} finally {
 			is_regenerating = null;
@@ -393,7 +306,7 @@
 					disabled={is_regenerating !== null}
 					onclick={regenerate_month_plan}
 				>
-					{calendar_generate_month_label()}
+					{m.planner_calendar_generate_month()}
 				</Button>
 				<Button
 					variant="secondary"
@@ -403,7 +316,7 @@
 					disabled={is_regenerating !== null}
 					onclick={regenerate_next_two_weeks_plan}
 				>
-					{calendar_generate_two_weeks_label()}
+					{m.planner_calendar_generate_two_weeks()}
 				</Button>
 				<Button
 					variant="outline"
@@ -424,7 +337,7 @@
 			</div>
 		</header>
 
-		<p class="calendar-hint">{calendar_generate_hint()}</p>
+		<p class="calendar-hint">{m.planner_calendar_generate_hint()}</p>
 
 		{#if overview_days.length === 0}
 			<div class="empty-panel">

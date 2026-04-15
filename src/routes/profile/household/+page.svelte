@@ -7,7 +7,6 @@
 	import ProfileTabs from "$lib/components/ui/ProfileTabs/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
-	import { getLocale } from "$lib/paraglide/runtime";
 	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import type { HouseholdKind } from "$lib/types/planning";
@@ -15,7 +14,6 @@
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
-	const message_registry = m as Record<string, unknown>;
 	const households = $derived(household_store.profiles);
 	const home_household_id = $derived.by(
 		() =>
@@ -46,155 +44,66 @@
 	let disliked_ingredients = $state("");
 	let household_pending_delete_id = $state<string | null>(null);
 
-	function localized_fallback(english: string, portuguese: string): string {
-		return getLocale() === "pt-br" ? portuguese : english;
-	}
-
-	function call_optional_message<TInputs>(
-		candidate: unknown,
-		fallback: string,
-		inputs?: TInputs,
-	): string {
-		if (typeof candidate !== "function") {
-			return fallback;
-		}
-
-		try {
-			return inputs === undefined
-				? (candidate as () => string)()
-				: (candidate as (input: TInputs) => string)(inputs);
-		} catch {
-			return fallback;
-		}
-	}
-
-	function get_optional_message(key: string, fallback: string): string {
-		return call_optional_message(message_registry[key], fallback);
-	}
-
 	function household_profiles_title(): string {
-		return get_optional_message(
-			"household_profiles_title",
-			localized_fallback("Households and businesses", "Casas e negócios"),
-		);
+		return m.household_profiles_title();
 	}
 
 	function household_active_label(): string {
-		return get_optional_message(
-			"household_active_label",
-			localized_fallback("Active household", "Casa ativa"),
-		);
+		return m.household_active_label();
 	}
 
 	function household_kind_label(): string {
-		return get_optional_message(
-			"household_kind_label",
-			localized_fallback("Profile type", "Tipo de perfil"),
-		);
+		return m.household_kind_label();
 	}
 
 	function household_kind_name(kind: HouseholdKind): string {
 		return kind === "business"
-			? get_optional_message(
-					"household_kind_business",
-					localized_fallback("Business", "Negócio"),
-				)
-			: get_optional_message(
-					"household_kind_home",
-					localized_fallback("Home", "Casa"),
-				);
+			? m.household_kind_business()
+			: m.household_kind_home();
 	}
 
 	function household_add_home(): string {
-		return get_optional_message(
-			"household_add_home",
-			localized_fallback("Add home", "Adicionar casa"),
-		);
+		return m.household_add_home();
 	}
 
 	function household_add_business(): string {
-		return get_optional_message(
-			"household_add_business",
-			localized_fallback("Add business", "Adicionar negócio"),
-		);
+		return m.household_add_business();
 	}
 
 	function household_plan_count(count: number): string {
-		const fallback = localized_fallback(
-			`${count} saved plans`,
-			`${count} planos salvos`,
-		);
-
-		return call_optional_message(
-			message_registry.household_plan_count,
-			fallback,
-			{
-				count: `${count}`,
-			},
-		);
+		return m.household_plan_count({ count: `${count}` });
 	}
 
 	function household_filter_hint(): string {
-		return get_optional_message(
-			"household_household_filter_hint",
-			localized_fallback(
-				"Planner and shopping views follow the active household.",
-				"O planejador e a lista de compras seguem a casa ativa.",
-			),
-		);
+		return m.household_household_filter_hint();
 	}
 
 	function household_created(name: string): string {
-		const fallback = localized_fallback(`Created ${name}`, `${name} criado`);
-
-		return call_optional_message(message_registry.household_created, fallback, {
-			name,
-		});
+		return m.household_created({ name });
 	}
 
 	function household_deleted_message(): string {
-		return get_optional_message(
-			"a11y_household_deleted",
-			localized_fallback("Household deleted", "Casa excluída"),
-		);
+		return m.a11y_household_deleted();
 	}
 
 	function household_delete_label(): string {
-		return get_optional_message(
-			"household_delete_label",
-			localized_fallback("Delete profile", "Excluir perfil"),
-		);
+		return m.household_delete_label();
 	}
 
 	function household_delete_title(): string {
-		return get_optional_message(
-			"household_delete_title",
-			localized_fallback("Delete profile", "Excluir perfil"),
-		);
+		return m.household_delete_title();
 	}
 
 	function household_delete_description(): string {
-		return get_optional_message(
-			"household_delete_description",
-			localized_fallback(
-				"This permanently removes the selected profile and every plan connected to it.",
-				"Isso remove permanentemente o perfil selecionado e todos os planos conectados a ele.",
-			),
-		);
+		return m.household_delete_description();
 	}
 
 	function household_delete_cancel(): string {
-		return get_optional_message(
-			"household_delete_cancel",
-			localized_fallback("Cancel", "Cancelar"),
-		);
+		return m.household_delete_cancel();
 	}
 
 	function household_delete_confirm(): string {
-		return get_optional_message(
-			"household_delete_confirm",
-			localized_fallback("Delete profile", "Excluir perfil"),
-		);
+		return m.household_delete_confirm();
 	}
 
 	$effect(() => {

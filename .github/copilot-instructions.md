@@ -86,6 +86,7 @@
 - The base locale (`en`) has no URL prefix. Non-base locales get a prefix (e.g., `/pt-br/auth/login`).
 - To switch locale, link to `localizeHref(currentPath, { locale: 'pt-br' })` — Paraglide handles the rest.
 - Use `import * as m from '$lib/paraglide/messages.js';` to access localized messages.
+- if there is a m.* error for lint, check if the key exists in the source message files (`messages/en.json`, `messages/pt-br.json`), NEVER edit the generated `src/lib/paraglide/messages.js` file directly OR RUN `npm run generate:paraglide` without updating the source message files.
 
 ## Icons
 - Use `@iconify/svelte` for icons. Import specific icons from `@iconify-icons/` (e.g., `import { home } from '@iconify-icons/mdi/home';`).

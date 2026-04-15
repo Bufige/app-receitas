@@ -4,7 +4,7 @@
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import * as m from "$lib/paraglide/messages.js";
-	import { getLocale, localizeHref } from "$lib/paraglide/runtime";
+	import { localizeHref } from "$lib/paraglide/runtime";
 	import {
 		build_history_recent_activity,
 		build_history_top_recipe_names,
@@ -14,94 +14,40 @@
 	import { format_plan_selection_label } from "$lib/utils/planning";
 
 	const meal_plan_store = useMealPlanStore();
-	const message_registry = m as Record<string, unknown>;
 	let selected_plan_id = $state("all");
 	let filter_start_date = $state("");
 	let filter_end_date = $state("");
 
-	function localized_fallback(english: string, portuguese: string): string {
-		return getLocale() === "pt-br" ? portuguese : english;
-	}
-
-	function call_optional_message<TInputs>(
-		candidate: unknown,
-		fallback: string,
-		inputs?: TInputs,
-	): string {
-		if (typeof candidate !== "function") {
-			return fallback;
-		}
-
-		try {
-			return inputs === undefined
-				? (candidate as () => string)()
-				: (candidate as (input: TInputs) => string)(inputs);
-		} catch {
-			return fallback;
-		}
-	}
-
-	function get_optional_message(key: string, fallback: string): string {
-		return call_optional_message(message_registry[key], fallback);
-	}
-
 	function history_filters_title(): string {
-		return get_optional_message(
-			"profile_history_filters_title",
-			localized_fallback("History filters", "Filtros do histórico"),
-		);
+		return m.profile_history_filters_title();
 	}
 
 	function history_plan_filter_label(): string {
-		return get_optional_message(
-			"profile_history_plan_filter_label",
-			localized_fallback("Plan", "Plano"),
-		);
+		return m.profile_history_plan_filter_label();
 	}
 
 	function history_all_plans(): string {
-		return get_optional_message(
-			"profile_history_all_plans",
-			localized_fallback("All plans", "Todos os planos"),
-		);
+		return m.profile_history_all_plans();
 	}
 
 	function history_clear_filters(): string {
-		return get_optional_message(
-			"profile_history_clear_filters",
-			localized_fallback("Show all history", "Mostrar todo o histórico"),
-		);
+		return m.profile_history_clear_filters();
 	}
 
 	function history_filtered_snapshot(): string {
-		return get_optional_message(
-			"profile_history_filtered_snapshot",
-			localized_fallback("Filtered snapshot", "Resumo filtrado"),
-		);
+		return m.profile_history_filtered_snapshot();
 	}
 
 	function history_plan_snapshot(): string {
-		return get_optional_message(
-			"profile_history_plan_snapshot",
-			localized_fallback("Plan snapshot", "Resumo do plano"),
-		);
+		return m.profile_history_plan_snapshot();
 	}
 
 	function history_matching_plans(): string {
-		return get_optional_message(
-			"profile_history_matching_plans",
-			localized_fallback("Matching plans", "Planos encontrados"),
-		);
+		return m.profile_history_matching_plans();
 	}
 
 	function history_empty(): string {
-		return get_optional_message(
-			"profile_history_empty",
-			localized_fallback(
-				"No planning history matches this filter yet.",
-				"Nenhum histórico de planejamento corresponde a este filtro ainda.",
-			),
-		);
+		return m.profile_history_empty();
 	}
 
 	const available_plans = $derived(meal_plan_store.mealPlans);
