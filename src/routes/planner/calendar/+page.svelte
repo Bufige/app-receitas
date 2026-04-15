@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from "$app/environment";
 	import Button from "$lib/components/ui/Button/index.svelte";
+	import PageHero from "$lib/components/ui/PageHero/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
@@ -282,6 +283,24 @@
 />
 
 <section class="page">
+	<PageHero
+		title={m.planner_schedule_preview_title()}
+		subtitle={m.planner_schedule_preview_subtitle()}
+	>
+		{#snippet actions()}
+			<div class="hero-actions">
+				<Button
+					variant="primary"
+					size="medium"
+					round
+					href={localizeHref("/shopping-list")}
+				>
+					{m.nav_shopping_list()}
+				</Button>
+			</div>
+		{/snippet}
+	</PageHero>
+
 	<div class="calendar-page surface-panel">
 		{#if calendar_feedback}
 			<div class="calendar-feedback" role="status" aria-live="polite">
@@ -289,14 +308,14 @@
 			</div>
 		{/if}
 
-		<header class="calendar-header">
-			<div class="section-heading">
-				<p class="eyebrow">{meal_plan_store.mealPlan.name}</p>
-				<h1>{m.planner_schedule_preview_title()}</h1>
-				<p>{m.planner_schedule_preview_subtitle()}</p>
-				<p class="summary">{active_plan_summary}</p>
-			</div>
+		<div class="hero-summary">
+			<strong title={meal_plan_store.mealPlan.name}
+				>{meal_plan_store.mealPlan.name}</strong
+			>
+			<p>{active_plan_summary}</p>
+		</div>
 
+		<header class="calendar-header">
 			<div class="calendar-actions">
 				<Button
 					variant="secondary"
@@ -327,7 +346,7 @@
 					{m.planner_settings_title()}
 				</Button>
 				<Button
-					variant="primary"
+					variant="outline"
 					size="medium"
 					round
 					href={localizeHref("/planner?tab=meal")}
@@ -450,40 +469,40 @@
 	}
 
 	.calendar-header {
-		display: grid;
-		gap: 1rem;
+		display: flex;
+		justify-content: flex-start;
 
 		@include lg {
-			grid-template-columns: minmax(0, 1fr) auto;
-			align-items: end;
+			justify-content: flex-end;
 		}
 	}
 
-	.section-heading {
+	.hero-actions {
+		display: grid;
+		width: 100%;
+
+		@include md {
+			width: auto;
+		}
+	}
+
+	.hero-summary {
 		display: grid;
 		gap: 0.35rem;
 
-		h1 {
-			font-size: 1.4rem;
-			line-height: 1.1;
+		strong {
+			font-size: 0.95rem;
+			line-height: 1.2;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
 		}
 
-		p:last-child {
+		p {
 			color: var(--text-muted);
 			font-size: 0.95rem;
+			overflow-wrap: anywhere;
 		}
-	}
-
-	.eyebrow {
-		font-size: 0.78rem;
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		color: var(--accent-berry);
-	}
-
-	.summary {
-		overflow-wrap: anywhere;
 	}
 
 	.calendar-actions {
