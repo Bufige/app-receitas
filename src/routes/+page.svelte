@@ -19,7 +19,9 @@
 		"dinner",
 		"lunch",
 		"dinner",
+		"lunch",
 		"dinner",
+		"lunch",
 	];
 
 	let is_generating = $state(false);
