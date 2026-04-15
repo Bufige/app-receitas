@@ -1,14 +1,18 @@
 <script lang="ts">
 	import cartOutline from "@iconify-icons/mdi/cart-outline";
+	import magnify from "@iconify-icons/mdi/magnify";
 	import Icon from "@iconify/svelte";
 	import { browser } from "$app/environment";
 	import Button from "$lib/components/ui/Button/index.svelte";
+	import Input from "$lib/components/ui/Input/index.svelte";
+	import Modal from "$lib/components/ui/Modal/index.svelte";
 	import PageHero from "$lib/components/ui/PageHero/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
 	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
+	import type { Recipe } from "$lib/types/recipe";
 	import { announce } from "$lib/utils/announce";
 	import {
 		build_recipe_pool,
@@ -29,9 +33,21 @@
 	const meal_types: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
 	const generated_meal_types: MealType[] = ["lunch", "dinner"];
 	type CalendarRangeAction = "month" | "two_weeks" | "week";
+	type DayMealDraft = {
+		local_id: string;
+		entry_id: string | null;
+		date: string;
+		recipe_id: string;
+		meal_type: MealType;
+		search_query: string;
+	};
 
 	let is_regenerating = $state<CalendarRangeAction | null>(null);
 	let calendar_feedback = $state<string | null>(null);
+	let selected_day = $state<OverviewDay | null>(null);
+	let day_meal_drafts = $state<DayMealDraft[]>([]);
+	let day_modal_feedback = $state<string | null>(null);
+	let next_day_draft_count = 0;
 
 	type OverviewDay = {
 		date: string;
@@ -240,6 +256,147 @@
 	function show_calendar_feedback(message: string) {
 		calendar_feedback = message;
 		announce(message);
+	}
+
+	function build_day_meal_draft(
+		date: string,
+		entry?: ExpandedMealPlanEntry,
+	): DayMealDraft {
+		next_day_draft_count += 1;
+
+		return {
+			local_id: entry?.source_entry_id ?? `day-draft-${next_day_draft_count}`,
+			entry_id: entry?.source_entry_id ?? null,
+			date,
+			recipe_id: entry?.recipe_id ?? meal_plan_store.recipes[0]?.id ?? "",
+			meal_type: entry?.meal_type ?? "dinner",
+			search_query: "",
+		};
+	}
+
+	function build_day_label(day: OverviewDay) {
+		return `${day.weekday_label} · ${day.date_label}`;
+	}
+
+	function open_day_modal(day: OverviewDay) {
+		selected_day = day;
+		day_modal_feedback = null;
+
+		const drafts = meal_types.flatMap((meal_type) =>
+			day.slots[meal_type].map((entry) =>
+				build_day_meal_draft(day.date, entry),
+			),
+		);
+
+		day_meal_drafts =
+			drafts.length > 0 ? drafts : [build_day_meal_draft(day.date)];
+	}
+
+	function close_day_modal() {
+		selected_day = null;
+		day_meal_drafts = [];
+		day_modal_feedback = null;
+	}
+
+	function should_ignore_day_activation(event: MouseEvent) {
+		return event.target instanceof Element
+			? Boolean(event.target.closest("a, button, input, select, textarea"))
+			: false;
+	}
+
+	function handle_day_click(day: OverviewDay, event: MouseEvent) {
+		if (should_ignore_day_activation(event)) {
+			return;
+		}
+
+		open_day_modal(day);
+	}
+
+	function handle_day_keydown(day: OverviewDay, event: KeyboardEvent) {
+		if (event.key !== "Enter" && event.key !== " ") {
+			return;
+		}
+
+		event.preventDefault();
+		open_day_modal(day);
+	}
+
+	function update_day_draft(local_id: string, updates: Partial<DayMealDraft>) {
+		day_meal_drafts = day_meal_drafts.map((draft) =>
+			draft.local_id === local_id ? { ...draft, ...updates } : draft,
+		);
+	}
+
+	function add_day_meal_draft() {
+		if (!selected_day) {
+			return;
+		}
+
+		day_meal_drafts = [
+			...day_meal_drafts,
+			build_day_meal_draft(selected_day.date),
+		];
+	}
+
+	function get_filtered_recipes(
+		search_query: string,
+		selected_recipe_id: string,
+	): Recipe[] {
+		const normalized_query = search_query.trim().toLowerCase();
+		const selected_recipe = meal_plan_store.recipes.find(
+			(recipe) => recipe.id === selected_recipe_id,
+		);
+		const matches = normalized_query
+			? meal_plan_store.recipes.filter((recipe) => {
+					const haystack = [recipe.name, ...(recipe.tags ?? [])]
+						.join(" ")
+						.toLowerCase();
+
+					return haystack.includes(normalized_query);
+				})
+			: meal_plan_store.recipes;
+
+		if (
+			selected_recipe &&
+			!matches.some((recipe) => recipe.id === selected_recipe.id)
+		) {
+			return [selected_recipe, ...matches];
+		}
+
+		return matches;
+	}
+
+	function save_day_meal_changes() {
+		if (!selected_day) {
+			return;
+		}
+
+		for (const draft of day_meal_drafts) {
+			if (!draft.recipe_id) {
+				continue;
+			}
+
+			const result = draft.entry_id
+				? meal_plan_store.updateEntry(draft.entry_id, {
+						recipe_id: draft.recipe_id,
+						meal_type: draft.meal_type,
+					})
+				: meal_plan_store.addEntry({
+						recipe_id: draft.recipe_id,
+						date: draft.date,
+						meal_type: draft.meal_type,
+						servings: household_store.profile.default_servings,
+					});
+
+			if (!result.ok) {
+				day_modal_feedback = m.planner_entry_outside_range_error();
+				return;
+			}
+		}
+
+		const day_label = build_day_label(selected_day);
+		close_day_modal();
+		show_calendar_feedback(m.planner_calendar_day_saved({ date: day_label }));
 	}
 
 	function clear_calendar_feedback() {
@@ -475,46 +632,59 @@
 								class="overview-day"
 								class:has-meals={day.entry_count > 0}
 							>
-								<header class="overview-day-header">
-									<div>
-										<p class="overview-weekday">{day.weekday_label}</p>
-										<h2>{day.date_label}</h2>
-									</div>
-									{#if day.entry_count > 0}
-										<span class="overview-count">{day.entry_count}</span>
-									{/if}
-								</header>
+								<button
+									type="button"
+									class="overview-day-hitbox"
+									aria-label={m.planner_calendar_edit_day({
+										date: build_day_label(day),
+									})}
+									onclick={() => open_day_modal(day)}
+								></button>
 
-								{#if day.entry_count === 0}
-									<p class="overview-empty">{m.planned_meals_day_empty()}</p>
-								{:else}
-									<div class="overview-slot-list">
-										{#each meal_types as meal_type}
-											{#if day.slots[meal_type].length > 0}
-												<section class="overview-slot">
-													<span class="slot-label"
-														>{get_meal_type_label(meal_type)}</span
-													>
-													<div class="slot-content">
-														{#each day.slots[meal_type] as occurrence}
-															<a
-																class="slot-chip"
-																href={localizeHref(
-																	`/recipes/${get_recipe_slug(occurrence.recipe_id) ?? ""}`,
-																)}
-															>
-																<span
-																	>{get_recipe_name(occurrence.recipe_id)}</span
+								<div class="overview-day-content">
+									<header class="overview-day-header">
+										<div>
+											<p class="overview-weekday">{day.weekday_label}</p>
+											<h2>{day.date_label}</h2>
+										</div>
+										{#if day.entry_count > 0}
+											<span class="overview-count">{day.entry_count}</span>
+										{/if}
+									</header>
+
+									{#if day.entry_count === 0}
+										<p class="overview-empty">{m.planned_meals_day_empty()}</p>
+									{:else}
+										<div class="overview-slot-list">
+											{#each meal_types as meal_type}
+												{#if day.slots[meal_type].length > 0}
+													<section class="overview-slot">
+														<span class="slot-label"
+															>{get_meal_type_label(meal_type)}</span
+														>
+														<div class="slot-content">
+															{#each day.slots[meal_type] as occurrence}
+																<a
+																	class="slot-chip"
+																	href={localizeHref(
+																		`/recipes/${get_recipe_slug(occurrence.recipe_id) ?? ""}`,
+																	)}
 																>
-																<small>{occurrence.servings}</small>
-															</a>
-														{/each}
-													</div>
-												</section>
-											{/if}
-										{/each}
-									</div>
-								{/if}
+																	<span
+																		>{get_recipe_name(
+																			occurrence.recipe_id,
+																		)}</span
+																	>
+																	<small>{occurrence.servings}</small>
+																</a>
+															{/each}
+														</div>
+													</section>
+												{/if}
+											{/each}
+										</div>
+									{/if}
+								</div>
 							</article>
 						{:else}
 							<div class="overview-placeholder" aria-hidden="true"></div>
@@ -524,6 +694,119 @@
 			</div>
 		{/if}
 	</div>
+
+	<Modal
+		open={Boolean(selected_day)}
+		title={selected_day
+			? m.planner_calendar_day_modal_title({
+					date: build_day_label(selected_day),
+				})
+			: m.planner_calendar_day_modal_title({ date: "" })}
+		description={m.planner_calendar_day_modal_description()}
+		titleId="calendar-day-modal-title"
+		descriptionId="calendar-day-modal-description"
+		class="day-modal"
+	>
+		{#snippet children()}
+			{#if day_modal_feedback}
+				<p class="modal-feedback" role="alert">{day_modal_feedback}</p>
+			{/if}
+
+			<div class="day-modal-header">
+				<p class="day-modal-summary">
+					{selected_day?.entry_count ?? 0}
+					{m.planner_overview_occurrences().toLowerCase()}
+				</p>
+				<Button
+					variant="outline"
+					size="small"
+					round
+					onclick={add_day_meal_draft}
+				>
+					{m.planner_add_entry()}
+				</Button>
+			</div>
+
+			<div class="day-edit-list">
+				{#each day_meal_drafts as draft (draft.local_id)}
+					<section class="day-edit-card">
+						<Input
+							id={`recipe-search-${draft.local_id}`}
+							label={m.recipes_search_label()}
+							placeholder={m.recipes_search_placeholder()}
+							icon={magnify}
+							value={draft.search_query}
+							oninput={(event) =>
+								update_day_draft(draft.local_id, {
+									search_query: (event.currentTarget as HTMLInputElement).value,
+								})}
+						/>
+
+						<div class="day-edit-grid">
+							<div class="field-group">
+								<label for={`recipe-${draft.local_id}`}
+									>{m.planner_recipe_label()}</label
+								>
+								<select
+									id={`recipe-${draft.local_id}`}
+									value={draft.recipe_id}
+									onchange={(event) =>
+										update_day_draft(draft.local_id, {
+											recipe_id: (event.currentTarget as HTMLSelectElement)
+												.value,
+										})}
+								>
+									{#if get_filtered_recipes(draft.search_query, draft.recipe_id).length === 0}
+										<option value={draft.recipe_id}>{m.recipes_empty()}</option>
+									{:else}
+										{#each get_filtered_recipes(draft.search_query, draft.recipe_id) as recipe}
+											<option value={recipe.id}>{recipe.name}</option>
+										{/each}
+									{/if}
+								</select>
+							</div>
+
+							<div class="field-group">
+								<label for={`meal-type-${draft.local_id}`}
+									>{m.planner_meal_type_label()}</label
+								>
+								<select
+									id={`meal-type-${draft.local_id}`}
+									value={draft.meal_type}
+									onchange={(event) =>
+										update_day_draft(draft.local_id, {
+											meal_type: (event.currentTarget as HTMLSelectElement)
+												.value as MealType,
+										})}
+								>
+									<option value="breakfast"
+										>{m.planner_meal_type_breakfast()}</option
+									>
+									<option value="lunch">{m.planner_meal_type_lunch()}</option>
+									<option value="dinner">{m.planner_meal_type_dinner()}</option>
+									<option value="snack">{m.planner_meal_type_snack()}</option>
+								</select>
+							</div>
+						</div>
+					</section>
+				{/each}
+			</div>
+		{/snippet}
+
+		{#snippet actions()}
+			<Button variant="outline" size="medium" round onclick={close_day_modal}>
+				{m.household_delete_cancel()}
+			</Button>
+			<Button
+				variant="primary"
+				size="medium"
+				round
+				onclick={save_day_meal_changes}
+			>
+				{m.planner_calendar_day_save()}
+			</Button>
+		{/snippet}
+	</Modal>
 </section>
 
 <style lang="scss">
@@ -675,15 +958,52 @@
 	}
 
 	.overview-day {
+		position: relative;
 		gap: 0.75rem;
+		cursor: pointer;
+		transition:
+			transform var(--motion-base, 180ms) var(--ease-emphasized, ease),
+			border-color var(--motion-base, 180ms) var(--ease-emphasized, ease),
+			box-shadow var(--motion-base, 180ms) var(--ease-emphasized, ease);
 
 		&.has-meals {
 			border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
 		}
 
+		&:hover,
+		&:focus-visible {
+			transform: translateY(-2px);
+			border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
+			box-shadow: var(--card-shadow-hover);
+			outline: none;
+		}
+
 		h2 {
 			font-size: 1rem;
 		}
+	}
+
+	.overview-day-hitbox {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		border: 0;
+		border-radius: inherit;
+		background: none;
+		cursor: pointer;
+
+		&:focus-visible {
+			outline: 2px solid color-mix(in srgb, var(--primary) 36%, transparent);
+			outline-offset: 2px;
+		}
+	}
+
+	.overview-day-content {
+		position: relative;
+		z-index: 2;
+		display: grid;
+		gap: 0.75rem;
+		pointer-events: none;
 	}
 
 	.overview-day-header {
@@ -743,6 +1063,9 @@
 	}
 
 	.slot-chip {
+		position: relative;
+		z-index: 3;
+		pointer-events: auto;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.45rem;
@@ -758,6 +1081,78 @@
 		small {
 			color: var(--primary);
 			font-weight: 700;
+		}
+	}
+
+	:global(.day-modal) {
+		width: min(100%, 52rem);
+	}
+
+	.day-modal-header {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.day-modal-summary {
+		color: var(--text-muted);
+	}
+
+	.modal-feedback {
+		padding: 0.85rem 1rem;
+		border-radius: 16px;
+		border: 1px solid color-mix(in srgb, var(--error) 28%, var(--border));
+		background: color-mix(in srgb, var(--error) 8%, var(--surface));
+		color: var(--error);
+	}
+
+	.day-edit-list {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.day-edit-card {
+		display: grid;
+		gap: 1rem;
+		padding: 1rem;
+		border-radius: 18px;
+		border: 1px solid var(--border);
+		background: color-mix(in srgb, var(--surface) 96%, transparent);
+	}
+
+	.day-edit-grid {
+		display: grid;
+		gap: 0.9rem;
+
+		@include md {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	.field-group {
+		display: grid;
+		gap: 0.4rem;
+
+		label {
+			font-size: 0.875rem;
+			font-weight: 600;
+			color: var(--text);
+		}
+
+		select {
+			width: 100%;
+			padding: 0.75rem 0.85rem;
+			border-radius: 14px;
+			border: 1px solid var(--border);
+			background: color-mix(in srgb, var(--surface) 92%, transparent);
+			color: var(--text);
+
+			&:focus-visible {
+				outline: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
+				outline-offset: 1px;
+			}
 		}
 	}
 </style>
