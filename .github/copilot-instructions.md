@@ -1,5 +1,16 @@
 # Copilot Instructions
 
+## Core phylosophy
+ -  Simplicity and aggresive CTA are a must for every core user flow. This is a must.
+ - For UI/UX decisions, always prioritize the user. Think about what would be most intuitive, efficient, and delightful for the end user. Follow established design patterns and accessibility best practices to create an inclusive experience.
+ - Simplicity and clarity above all. Always prefer the simplest solution that gets the job done. Avoid clever hacks, over-engineering, or unnecessary abstractions. Code is read more often than it’s written — prioritize readability and maintainability.
+ - Consistency is king. Follow existing patterns and conventions in the codebase for everything: file structure, naming, styling, data fetching, component design, etc. Avoid introducing new ways of doing things unless absolutely necessary.
+ - DRY principles: If you find yourself writing the same code more than once, extract it into a reusable component, function, or style. Never copy-paste code across files.
+ - Mobile-first and accessibility-first. Always design and implement with small screens and keyboard/screen reader users in mind. Use semantic HTML, proper ARIA attributes, and ensure all interactive elements are accessible.
+ - Use the existing tech stack and libraries as intended. Do not introduce new dependencies or patterns without a very good reason.
+ - When in doubt, follow the existing codebase. If you’re not sure how to implement something, look for similar examples in the code and mimic those patterns.
+ - Always prefer existing components and utilities before creating new ones. Check `$lib/components/` and `$lib/utils/` before adding new code.
+
 ## Stack
 
 - SvelteKit 2 (Svelte 5, runes mode)

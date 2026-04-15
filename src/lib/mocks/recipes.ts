@@ -6,6 +6,8 @@ export const mock_recipes: Recipe[] = [
 		slug: "spaghetti-bolognese",
 		name: "Spaghetti Bolognese",
 		description: "Classic pasta dish with ground beef and tomato sauce.",
+		country: "Brazil",
+		region: "southeast",
 		image_url:
 			"https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=1200",
 		servings: 4,
@@ -46,6 +48,8 @@ export const mock_recipes: Recipe[] = [
 		slug: "sheet-pan-salmon",
 		name: "Sheet Pan Salmon",
 		description: "Oven-roasted salmon with potatoes, asparagus, and lemon.",
+		country: "Brazil",
+		region: "south",
 		image_url:
 			"https://images.pexels.com/photos/32962795/pexels-photo-32962795.jpeg?auto=compress&cs=tinysrgb&w=1200",
 		servings: 4,
@@ -93,6 +97,7 @@ export const mock_recipes: Recipe[] = [
 		slug: "chicken-rice-bowl",
 		name: "Chicken Rice Bowl",
 		description: "A balanced bowl with seasoned chicken, rice, and vegetables.",
+		country: "Brazil",
 		image_url:
 			"https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg?auto=compress&cs=tinysrgb&w=1200",
 		servings: 2,
@@ -133,6 +138,8 @@ export const mock_recipes: Recipe[] = [
 		name: "Filé de Frango à Parmegiana",
 		description:
 			"Chicken breast fillets baked with tomato sauce, mozzarella, oregano, and a crisp breadcrumb coating.",
+		country: "Brazil",
+		region: "southeast",
 		image_url:
 			"https://static.itdg.com.br/images/640-400/9f5e6aa2a8b5bde896858f139b2c422c/228002-original.jpg",
 		servings: 6,
@@ -262,6 +269,8 @@ export const mock_recipes: Recipe[] = [
 		slug: "chickpea-salad",
 		name: "Mediterranean Chickpea Salad",
 		description: "A fresh salad with chickpeas, cucumber, tomato, and feta.",
+		country: "Brazil",
+		region: "northeast",
 		image_url:
 			"https://images.pexels.com/photos/257816/pexels-photo-257816.jpeg?auto=compress&cs=tinysrgb&w=1200",
 		servings: 3,
@@ -311,6 +320,8 @@ export const mock_recipes: Recipe[] = [
 		slug: "vegetable-soup",
 		name: "Vegetable Soup",
 		description: "Comforting soup with seasonal vegetables and herbs.",
+		country: "Brazil",
+		region: "south",
 		image_url:
 			"https://images.pexels.com/photos/539451/pexels-photo-539451.jpeg?auto=compress&cs=tinysrgb&w=1200",
 		servings: 4,
@@ -350,6 +361,8 @@ export const mock_recipes: Recipe[] = [
 		slug: "berry-yogurt-parfait",
 		name: "Berry Yogurt Parfait",
 		description: "Layered yogurt, berries, and granola for a quick breakfast.",
+		country: "Brazil",
+		region: "north",
 		image_url:
 			"https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?auto=compress&cs=tinysrgb&w=1200",
 		servings: 2,

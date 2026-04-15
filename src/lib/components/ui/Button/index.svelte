@@ -103,6 +103,7 @@
 		}
 
 		&:hover:not(:disabled) {
+			cursor: pointer;
 			transform: translateY(-2px);
 		}
 

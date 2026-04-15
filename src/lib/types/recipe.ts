@@ -13,12 +13,21 @@ export type RecipeInstruction = {
 	description: string;
 };
 
+export type BrazilRegion =
+	| "north"
+	| "northeast"
+	| "midwest"
+	| "southeast"
+	| "south";
+
 export type Recipe = {
 	id: string;
 	slug: string;
 	name: string;
 	description?: string;
 	image_url?: string;
+	country: string;
+	region?: BrazilRegion;
 	servings: number;
 	preparation_time_in_minutes: number;
 	tags?: string[];
