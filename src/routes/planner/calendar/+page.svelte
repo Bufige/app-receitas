@@ -621,6 +621,7 @@
 		}
 
 		const current_day = selected_day;
+		const current_plan = meal_plan_store.mealPlan;
 		const existing_entries = meal_types.flatMap((meal_type) =>
 			current_day.slots[meal_type].map((entry) => ({
 				meal_type,
@@ -682,36 +683,45 @@
 				entry_id: matched_entry_id,
 			};
 		});
+		const plan_entries_by_id = new Map(
+			current_plan.entries.map((entry) => [entry.id, entry]),
+		);
+		const original_day_entry_ids = new Set(
+			existing_entries.map(({ entry }) => entry.source_entry_id),
+		);
+		const next_day_entries = draft_operations.flatMap<MealPlanEntry>(
+			(draft) => {
+				if (!draft.recipe_id) {
+					return [];
+				}
 
-		for (const { entry } of existing_entries) {
-			if (!matched_entry_ids.has(entry.source_entry_id)) {
-				meal_plan_store.removeEntry(entry.source_entry_id);
-			}
-		}
+				const current_entry = draft.entry_id
+					? plan_entries_by_id.get(draft.entry_id)
+					: undefined;
 
-		for (const draft of draft_operations) {
-			if (!draft.recipe_id) {
-				continue;
-			}
-
-			const result = draft.entry_id
-				? meal_plan_store.updateEntry(draft.entry_id, {
+				return [
+					{
+						id: current_entry?.id ?? crypto.randomUUID(),
 						recipe_id: draft.recipe_id,
 						date: draft.date,
 						meal_type: draft.meal_type,
-					})
-				: meal_plan_store.addEntry({
-						recipe_id: draft.recipe_id,
-						date: draft.date,
-						meal_type: draft.meal_type,
-						servings: household_store.profile.default_servings,
-					});
+						servings:
+							current_entry?.servings ??
+							household_store.profile.default_servings,
+						recurrence_rule: current_entry?.recurrence_rule,
+						series_id: current_entry?.series_id,
+					},
+				];
+			},
+		);
+		const next_entries = [
+			...current_plan.entries.filter(
+				(entry) => !original_day_entry_ids.has(entry.id),
+			),
+			...next_day_entries,
+		];
 
-			if (!result.ok) {
-				day_modal_feedback = m.planner_entry_outside_range_error();
-				return;
-			}
-		}
+		meal_plan_store.replaceEntries(next_entries);
 
 		const day_label = build_day_label(current_day);
 		close_day_modal();
