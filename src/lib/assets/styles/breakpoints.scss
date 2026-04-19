@@ -1,4 +1,6 @@
 // Breakpoints (mobile-first: min-width)
+$xs: 390px;
+$phone-lg: 430px;
 $sm: 640px;
 $md: 768px;
 $lg: 1024px;
@@ -6,7 +8,118 @@ $xl: 1280px;
 $wide: 1440px;
 $xxl: 1536px;
 
+@function safe-area($side, $fallback: 0px) {
+	@if $side ==top {
+		@return env(safe-area-inset-top, $fallback);
+	}
+
+	@if $side ==right {
+		@return env(safe-area-inset-right, $fallback);
+	}
+
+	@if $side ==bottom {
+		@return env(safe-area-inset-bottom, $fallback);
+	}
+
+	@if $side ==left {
+		@return env(safe-area-inset-left, $fallback);
+	}
+
+	@error "Unknown safe-area side `#{$side}`. Use top, right, bottom, or left.";
+}
+
+@function safe-area-top($fallback: 0px) {
+	@return safe-area(top, $fallback);
+}
+
+@function safe-area-right($fallback: 0px) {
+	@return safe-area(right, $fallback);
+}
+
+@function safe-area-bottom($fallback: 0px) {
+	@return safe-area(bottom, $fallback);
+}
+
+@function safe-area-left($fallback: 0px) {
+	@return safe-area(left, $fallback);
+}
+
+@mixin responsive-safe-area-offset($property,
+	$base,
+	$side: top,
+	$xs: null,
+	$phone-lg: null,
+	$sm: null,
+	$md: null,
+	$lg: null,
+	$xl: null,
+	$wide: null,
+	$xxl: null,
+	$fallback: 0px) {
+	#{$property}: calc(#{$base} + safe-area($side, $fallback));
+
+	@if $xs !=null {
+		@include xs {
+			#{$property}: calc(#{$xs} + safe-area($side, $fallback));
+		}
+	}
+
+	@if $phone-lg !=null {
+		@include phone-lg {
+			#{$property}: calc(#{$phone-lg} + safe-area($side, $fallback));
+		}
+	}
+
+	@if $sm !=null {
+		@include sm {
+			#{$property}: calc(#{$sm} + safe-area($side, $fallback));
+		}
+	}
+
+	@if $md !=null {
+		@include md {
+			#{$property}: calc(#{$md} + safe-area($side, $fallback));
+		}
+	}
+
+	@if $lg !=null {
+		@include lg {
+			#{$property}: calc(#{$lg} + safe-area($side, $fallback));
+		}
+	}
+
+	@if $xl !=null {
+		@include xl {
+			#{$property}: calc(#{$xl} + safe-area($side, $fallback));
+		}
+	}
+
+	@if $wide !=null {
+		@include wide {
+			#{$property}: calc(#{$wide} + safe-area($side, $fallback));
+		}
+	}
+
+	@if $xxl !=null {
+		@include xxl {
+			#{$property}: calc(#{$xxl} + safe-area($side, $fallback));
+		}
+	}
+}
+
 // Mixins for convenience
+@mixin xs {
+	@media (min-width: $xs) {
+		@content;
+	}
+}
+
+@mixin phone-lg {
+	@media (min-width: $phone-lg) {
+		@content;
+	}
+}
+
 @mixin sm {
 	@media (min-width: $sm) {
 		@content;

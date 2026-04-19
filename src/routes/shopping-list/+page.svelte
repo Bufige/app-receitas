@@ -485,7 +485,7 @@
 
 	.mobile-shopping-summary {
 		position: fixed;
-		top: calc(56px + env(safe-area-inset-top, 0px));
+		top: calc(56px + safe-area-top());
 		left: 0;
 		right: 0;
 		z-index: 90;
@@ -736,7 +736,13 @@
 			var(--ease-emphasized, ease);
 
 		&.mobile-summary-visible {
-			padding-top: calc(8.5rem + env(safe-area-inset-top, 0px));
+			@include responsive-safe-area-offset(
+				padding-top,
+				13.25rem,
+				$xs: 12.5rem,
+				$phone-lg: 11.5rem,
+				$sm: 9rem
+			);
 		}
 
 		@include md {
