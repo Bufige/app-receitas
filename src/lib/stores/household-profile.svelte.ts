@@ -1,8 +1,4 @@
 import { browser } from "$app/environment";
-import {
-	mock_household_profile,
-	mock_household_profiles,
-} from "$lib/mocks/household-profile";
 import type { HouseholdKind, HouseholdProfile } from "$lib/types/planning";
 
 const LEGACY_STORAGE_KEY = "household_profile";
@@ -13,12 +9,21 @@ function clone_profile(profile: HouseholdProfile): HouseholdProfile {
 	return JSON.parse(JSON.stringify(profile)) as HouseholdProfile;
 }
 
+const DEFAULT_HOME_PROFILE: HouseholdProfile = {
+	id: "household-home-default",
+	name: "Home",
+	kind: "home",
+	default_servings: 2,
+	dietary_preferences: [],
+	disliked_ingredients: [],
+};
+
 function default_profiles(): HouseholdProfile[] {
-	return mock_household_profiles.map((profile) => clone_profile(profile));
+	return [clone_profile(DEFAULT_HOME_PROFILE)];
 }
 
 function default_profile(): HouseholdProfile {
-	return clone_profile(mock_household_profile);
+	return clone_profile(DEFAULT_HOME_PROFILE);
 }
 
 function default_active_household_id(

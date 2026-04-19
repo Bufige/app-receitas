@@ -82,6 +82,7 @@
 	const filtered_plan_summaries = $derived.by(() => {
 		const summaries = build_plan_history_summaries(
 			selected_plans,
+			meal_plan_store.recipes,
 			active_range,
 		);
 
@@ -97,10 +98,18 @@
 		);
 	});
 	const history_activity = $derived.by(() =>
-		build_history_recent_activity(selected_plans, active_range),
+		build_history_recent_activity(
+			selected_plans,
+			meal_plan_store.recipes,
+			active_range,
+		),
 	);
 	const history_top_recipe_names = $derived.by(() =>
-		build_history_top_recipe_names(selected_plans, active_range),
+		build_history_top_recipe_names(
+			selected_plans,
+			meal_plan_store.recipes,
+			active_range,
+		),
 	);
 	const focused_plan_summary = $derived.by(() =>
 		selected_plan_id === "all" ? null : (filtered_plan_summaries[0] ?? null),

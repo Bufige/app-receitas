@@ -1,18 +1,15 @@
 <script lang="ts">
-	import { browser } from "$app/environment";
 	import { goto } from "$app/navigation";
 	import Button from "$lib/components/ui/Button/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
-	import { mock_recipes } from "$lib/mocks/recipes";
+	import { recipesApi } from "$lib/api/recipes";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
 	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
+	import { backend_recipe_to_ui_recipe } from "$lib/utils/backend-adapters";
 	import type { MealType } from "$lib/types/planning";
-	import {
-		build_recipe_pool,
-		collect_plan_dates,
-	} from "$lib/utils/recipe-generation";
+	import { collect_plan_dates } from "$lib/utils/recipe-generation";
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
@@ -30,6 +27,8 @@
 		is_generating = true;
 
 		try {
+			await meal_plan_store.ensureReady();
+			meal_plan_store.setPlanningPreset("this_week");
 			const default_home_household =
 				household_store.profiles.find((profile) => profile.kind === "home") ??
 				household_store.profile;
@@ -39,34 +38,41 @@
 				{ default_servings: default_generated_servings },
 				default_home_household.id,
 			);
-			meal_plan_store.createPlan(default_home_household.id);
-			const timezone = browser
-				? Intl.DateTimeFormat().resolvedOptions().timeZone
-				: undefined;
+			const requested_recipe_amount =
+				weekly_day_count * weekly_meal_types.length;
+			const random_recipes_response = await recipesApi.random({
+				amount: requested_recipe_amount,
+			});
+			const random_recipes = random_recipes_response.data.map((recipe) =>
+				backend_recipe_to_ui_recipe(recipe),
+			);
 
-			const recipe_pool = build_recipe_pool(mock_recipes, timezone);
 			const plan_dates = collect_plan_dates(
 				meal_plan_store.mealPlan.start_date,
 				meal_plan_store.mealPlan.end_date,
 				weekly_day_count,
 			);
 
-			if (recipe_pool.length === 0) {
+			if (random_recipes.length === 0) {
 				await goto(localizeHref("/planner/calendar"));
 				return;
 			}
 
+			meal_plan_store.mergeRecipes(random_recipes);
+
 			let recipe_index = 0;
+			const generated_entries = [];
 
 			for (const plan_date of plan_dates) {
 				for (const meal_type of weekly_meal_types) {
-					const recipe = recipe_pool[recipe_index % recipe_pool.length];
+					const recipe = random_recipes[recipe_index % random_recipes.length];
 
 					if (!recipe) {
 						continue;
 					}
 
-					meal_plan_store.addEntry({
+					generated_entries.push({
+						id: crypto.randomUUID(),
 						recipe_id: recipe.id,
 						date: plan_date,
 						meal_type,
@@ -75,6 +81,8 @@
 					recipe_index += 1;
 				}
 			}
+
+			meal_plan_store.replaceEntries(generated_entries);
 
 			await goto(localizeHref("/planner/calendar"));
 		} finally {

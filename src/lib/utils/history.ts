@@ -1,12 +1,15 @@
-import { mock_meal_plans } from "$lib/mocks/meal-plans";
-import { get_recipe_by_id, mock_recipes } from "$lib/mocks/recipes";
 import type { MealPlan, MealPlanEntry } from "$lib/types/planning";
+import type { Recipe } from "$lib/types/recipe";
 import {
 	expand_meal_plan_entries,
 	format_iso_date,
 	parse_iso_date,
 } from "$lib/utils/planning";
 import { calculate_shopping_list } from "$lib/utils/shopping-list";
+
+function get_recipe_name(recipes: Recipe[], recipe_id: string): string {
+	return recipes.find((recipe) => recipe.id === recipe_id)?.name ?? recipe_id;
+}
 
 export type PlanHistoryRange = {
 	start_date?: string;
@@ -92,6 +95,7 @@ function count_recurring_series(entries: MealPlanEntry[]): number {
 }
 
 function build_top_recipe_names(
+	recipes: Recipe[],
 	occurrences: ReturnType<typeof get_history_occurrences>,
 ): string[] {
 	const counts = new Map<string, number>();
@@ -103,11 +107,12 @@ function build_top_recipe_names(
 	return [...counts.entries()]
 		.sort((first, second) => second[1] - first[1])
 		.slice(0, 3)
-		.map(([recipe_id]) => get_recipe_by_id(recipe_id)?.name ?? recipe_id);
+		.map(([recipe_id]) => get_recipe_name(recipes, recipe_id));
 }
 
 function build_recent_activity(
 	plan: MealPlan,
+	recipes: Recipe[],
 	range?: PlanHistoryRange,
 ): PlanHistorySummary["recent_activity"] {
 	const expanded_entries = get_history_occurrences(plan, range)
@@ -120,7 +125,7 @@ function build_recent_activity(
 		id: `${plan.id}-${entry.id}-${entry.occurrence_date}`,
 		plan_id: plan.id,
 		plan_name: plan.name,
-		recipe_name: get_recipe_by_id(entry.recipe_id)?.name ?? entry.recipe_id,
+		recipe_name: get_recipe_name(recipes, entry.recipe_id),
 		date: entry.occurrence_date,
 		recurrence_ends_on: entry.recurrence_rule?.ends_on,
 	}));
@@ -128,6 +133,7 @@ function build_recent_activity(
 
 export function build_history_top_recipe_names(
 	plans: MealPlan[],
+	recipes: Recipe[],
 	range?: PlanHistoryRange,
 ): string[] {
 	const counts = new Map<string, number>();
@@ -144,21 +150,23 @@ export function build_history_top_recipe_names(
 	return [...counts.entries()]
 		.sort((first, second) => second[1] - first[1])
 		.slice(0, 5)
-		.map(([recipe_id]) => get_recipe_by_id(recipe_id)?.name ?? recipe_id);
+		.map(([recipe_id]) => get_recipe_name(recipes, recipe_id));
 }
 
 export function build_history_recent_activity(
 	plans: MealPlan[],
+	recipes: Recipe[],
 	range?: PlanHistoryRange,
 ): PlanHistorySummary["recent_activity"] {
 	return plans
-		.flatMap((plan) => build_recent_activity(plan, range))
+		.flatMap((plan) => build_recent_activity(plan, recipes, range))
 		.sort((first, second) => second.date.localeCompare(first.date))
 		.slice(0, 8);
 }
 
 export function build_plan_history_summaries(
 	plans: MealPlan[],
+	recipes: Recipe[],
 	range?: PlanHistoryRange,
 ): PlanHistorySummary[] {
 	return plans.map((plan) => {
@@ -174,7 +182,7 @@ export function build_plan_history_summaries(
 				}
 			: plan;
 		const shopping_list = effective_range
-			? calculate_shopping_list(mock_recipes, filtered_plan)
+			? calculate_shopping_list(recipes, filtered_plan)
 			: [];
 		const active_entry_ids = new Set(
 			expanded_entries.map((entry) => entry.source_entry_id),
@@ -192,10 +200,8 @@ export function build_plan_history_summaries(
 			total_occurrences: expanded_entries.length,
 			shopping_item_count: shopping_list.length,
 			recurring_series_count: count_recurring_series(active_entries),
-			top_recipe_names: build_top_recipe_names(expanded_entries),
-			recent_activity: build_recent_activity(plan, range),
+			top_recipe_names: build_top_recipe_names(recipes, expanded_entries),
+			recent_activity: build_recent_activity(plan, recipes, range),
 		};
 	});
 }
-
-export const mock_plan_history = build_plan_history_summaries(mock_meal_plans);

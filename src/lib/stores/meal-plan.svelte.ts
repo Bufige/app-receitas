@@ -1,14 +1,23 @@
 import { browser } from "$app/environment";
-import { mock_meal_plans } from "$lib/mocks/meal-plans";
-import { mock_recipes } from "$lib/mocks/recipes";
+import { mealPlansApi } from "$lib/api/meal-plans";
+import { recipesApi } from "$lib/api/recipes";
 import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
+import type { BackendMealPlan } from "$lib/types/backend";
 import type {
 	MealPlan,
 	MealPlanEntry,
 	PlanningPreset,
 	RecurrenceRule,
 	ShoppingItemStatus,
+	ShoppingListItem,
 } from "$lib/types/planning";
+import type { Recipe } from "$lib/types/recipe";
+import {
+	backend_meal_plan_to_ui_plan,
+	backend_recipe_to_ui_recipe,
+	backend_shopping_list_to_ui_items,
+	ui_entry_to_backend_recipe_slot,
+} from "$lib/utils/backend-adapters";
 import {
 	detect_meal_plan_conflicts,
 	get_preset_range,
@@ -17,107 +26,60 @@ import {
 } from "$lib/utils/planning";
 import { calculate_shopping_list } from "$lib/utils/shopping-list";
 
-const LEGACY_PLAN_STORAGE_KEY = "meal_plan";
-const PLANS_STORAGE_KEY = "meal_plans";
 const ACTIVE_PLAN_STORAGE_KEY = "active_meal_plan_id";
 const STATUS_STORAGE_KEY = "shopping_item_statuses";
-const DEFAULT_HOME_HOUSEHOLD_ID = "household-home-001";
+const GUEST_PLAN_STORAGE_KEY = "guest_meal_plan_id";
+const DEFAULT_HOME_HOUSEHOLD_ID = "household-home-default";
 
-function clone_plan(plan: MealPlan): MealPlan {
-	return JSON.parse(JSON.stringify(plan)) as MealPlan;
-}
+function default_plan(household_id = DEFAULT_HOME_HOUSEHOLD_ID): MealPlan {
+	const range = get_preset_range("this_week");
 
-function normalize_plan(plan: MealPlan): MealPlan {
 	return {
-		...plan,
-		household_id: plan.household_id ?? DEFAULT_HOME_HOUSEHOLD_ID,
+		id: "",
+		household_id,
+		name: "My plan",
+		period: "week",
+		planning_preset: "this_week",
+		start_date: range.start_date,
+		end_date: range.end_date,
+		entries: [],
 	};
 }
 
-function default_plans(): MealPlan[] {
-	return mock_meal_plans.map((plan) => clone_plan(plan));
+function build_entry_id(): string {
+	return crypto.randomUUID();
 }
 
-function default_plan(): MealPlan {
-	return clone_plan(default_plans()[0]);
+function build_plan_name(plans: MealPlan[]): string {
+	return `Plan ${plans.length + 1}`;
 }
 
-function default_active_plan_id(plans: MealPlan[] = default_plans()): string {
-	return plans[0]?.id ?? "";
+function build_series_id(): string {
+	return `series-${crypto.randomUUID()}`;
 }
 
 function get_plans_for_household(
 	plans: MealPlan[],
 	household_id: string,
 ): MealPlan[] {
-	return plans.filter((plan) => plan.household_id === household_id);
+	const matching_plans = plans.filter(
+		(plan) => plan.household_id === household_id,
+	);
+
+	return matching_plans.length > 0 ? matching_plans : plans;
 }
 
-function get_active_plan(
-	plans: MealPlan[],
-	active_plan_id: string,
-	household_id: string,
-): MealPlan {
-	const visible_plans = get_plans_for_household(plans, household_id);
-
+function get_active_plan(plans: MealPlan[], active_plan_id: string): MealPlan {
 	return (
-		visible_plans.find((plan) => plan.id === active_plan_id) ??
-		visible_plans[0] ??
 		plans.find((plan) => plan.id === active_plan_id) ??
 		plans[0] ??
 		default_plan()
 	);
 }
 
-function load_plans(): MealPlan[] {
-	if (!browser) {
-		return default_plans();
-	}
-
-	try {
-		const stored_plans = localStorage.getItem(PLANS_STORAGE_KEY);
-
-		if (stored_plans) {
-			const parsed = (JSON.parse(stored_plans) as MealPlan[]).map((plan) =>
-				normalize_plan(plan),
-			);
-			return parsed.length > 0 ? parsed : default_plans();
-		}
-
-		const legacy_plan = localStorage.getItem(LEGACY_PLAN_STORAGE_KEY);
-
-		if (!legacy_plan) {
-			return default_plans();
-		}
-
-		const fallback_plans = default_plans();
-		return [
-			normalize_plan({
-				...fallback_plans[0],
-				...(JSON.parse(legacy_plan) as MealPlan),
-			}),
-			...fallback_plans.slice(1),
-		];
-	} catch {
-		return default_plans();
-	}
-}
-
-function save_plans(plans: MealPlan[]) {
-	if (!browser) {
-		return;
-	}
-
-	try {
-		localStorage.setItem(PLANS_STORAGE_KEY, JSON.stringify(plans));
-	} catch {
-		return;
-	}
-}
-
 function load_active_plan_id(plans: MealPlan[]): string {
 	if (!browser) {
-		return default_active_plan_id(plans);
+		return plans[0]?.id ?? "";
 	}
 
 	try {
@@ -126,9 +88,9 @@ function load_active_plan_id(plans: MealPlan[]): string {
 			return stored;
 		}
 
-		return default_active_plan_id(plans);
+		return plans[0]?.id ?? "";
 	} catch {
-		return default_active_plan_id(plans);
+		return plans[0]?.id ?? "";
 	}
 }
 
@@ -171,29 +133,238 @@ function save_statuses(statuses: Record<string, ShoppingItemStatus>) {
 	}
 }
 
-let meal_plans = $state<MealPlan[]>(default_plans());
-let active_plan_id = $state(default_active_plan_id());
+function build_status_key(plan_id: string, ingredient_id: string): string {
+	return `${plan_id}:${ingredient_id}`;
+}
+
+function get_active_plan_statuses(
+	plan_id: string,
+	statuses: Record<string, ShoppingItemStatus>,
+): Record<string, ShoppingItemStatus> {
+	const prefix = `${plan_id}:`;
+
+	return Object.fromEntries(
+		Object.entries(statuses)
+			.filter(([key]) => key.startsWith(prefix))
+			.map(([key, value]) => [key.slice(prefix.length), value]),
+	) as Record<string, ShoppingItemStatus>;
+}
+
+function apply_statuses(
+	items: ShoppingListItem[],
+	statuses: Record<string, ShoppingItemStatus>,
+): ShoppingListItem[] {
+	return items.map((item) => ({
+		...item,
+		status: statuses[item.ingredient_id] ?? item.status ?? "pending",
+	}));
+}
+
+function map_backend_plans(meal_plans: BackendMealPlan[]): MealPlan[] {
+	return meal_plans.map((plan) => backend_meal_plan_to_ui_plan(plan));
+}
+
+function normalize_profile_id(household_id?: string): string | undefined {
+	if (!household_id || household_id.startsWith("household-")) {
+		return undefined;
+	}
+
+	return household_id;
+}
+
+function to_backend_period(period: MealPlan["period"]): "weekly" | "monthly" {
+	return period === "month" ? "monthly" : "weekly";
+}
+
+let meal_plans = $state<MealPlan[]>([]);
+let recipe_catalog = $state<Recipe[]>([]);
+let shopping_lists_by_plan_id = $state<Record<string, ShoppingListItem[]>>({});
+let active_plan_id = $state("");
 let shopping_item_statuses = $state<Record<string, ShoppingItemStatus>>({});
 let initialized = $state(false);
+let loading = $state(false);
+let loading_promise: Promise<void> | null = null;
 
-function hydrate() {
+async function load_recipes() {
+	const response = await recipesApi.list({ page: 0, limit: 100 });
+	recipe_catalog = response.data.map((recipe) =>
+		backend_recipe_to_ui_recipe(recipe),
+	);
+}
+
+async function create_remote_plan(
+	name: string,
+	household_id?: string,
+): Promise<MealPlan> {
+	const range = get_preset_range("this_week");
+	const response = await mealPlansApi.create({
+		name,
+		period: "weekly",
+		start_date: range.start_date,
+		end_date: range.end_date,
+		profile_id: normalize_profile_id(household_id),
+		recipes: [],
+	});
+	const next_plan = backend_meal_plan_to_ui_plan(response.data);
+	meal_plans = [
+		next_plan,
+		...meal_plans.filter((plan) => plan.id !== next_plan.id),
+	];
+	active_plan_id = next_plan.id;
+	save_active_plan_id(active_plan_id);
+
+	if (browser) {
+		localStorage.setItem(GUEST_PLAN_STORAGE_KEY, next_plan.id);
+	}
+
+	await refresh_shopping_list(next_plan.id);
+	return next_plan;
+}
+
+async function load_guest_plan(): Promise<MealPlan[]> {
+	const stored_plan_id = browser
+		? localStorage.getItem(GUEST_PLAN_STORAGE_KEY)
+		: null;
+
+	if (stored_plan_id) {
+		try {
+			const response = await mealPlansApi.get(stored_plan_id);
+			return [backend_meal_plan_to_ui_plan(response.data)];
+		} catch {
+			if (browser) {
+				localStorage.removeItem(GUEST_PLAN_STORAGE_KEY);
+			}
+		}
+	}
+
+	const created_plan = await create_remote_plan("My plan");
+	return [created_plan];
+}
+
+async function load_meal_plans() {
+	const has_token = browser && Boolean(localStorage.getItem("auth_token"));
+
+	if (has_token) {
+		try {
+			const response = await mealPlansApi.list();
+			const next_plans = map_backend_plans(response.data);
+
+			if (next_plans.length > 0) {
+				meal_plans = next_plans;
+				active_plan_id = load_active_plan_id(next_plans);
+				save_active_plan_id(active_plan_id);
+				return;
+			}
+		} catch {
+			return;
+		}
+	}
+
+	meal_plans = await load_guest_plan();
+	active_plan_id = load_active_plan_id(meal_plans);
+	save_active_plan_id(active_plan_id);
+}
+
+async function refresh_shopping_list(plan_id: string) {
+	if (!plan_id) {
+		return;
+	}
+
+	try {
+		const response = await mealPlansApi.getShoppingList(plan_id);
+		shopping_lists_by_plan_id = {
+			...shopping_lists_by_plan_id,
+			[plan_id]: backend_shopping_list_to_ui_items(response.data),
+		};
+	} catch {
+		return;
+	}
+}
+
+async function ensure_loaded() {
 	if (!browser || initialized) {
 		return;
 	}
 
-	meal_plans = load_plans();
-	active_plan_id = load_active_plan_id(meal_plans);
-	shopping_item_statuses = load_statuses();
-	initialized = true;
+	if (loading_promise) {
+		return loading_promise;
+	}
+
+	loading = true;
+	loading_promise = (async () => {
+		shopping_item_statuses = load_statuses();
+		await load_recipes();
+		await load_meal_plans();
+
+		if (active_plan_id) {
+			await refresh_shopping_list(active_plan_id);
+		}
+
+		initialized = true;
+		loading = false;
+		loading_promise = null;
+	})();
+
+	return loading_promise;
 }
 
-function persist_plans() {
-	save_plans(meal_plans);
-	save_active_plan_id(active_plan_id);
+function hydrate() {
+	if (!browser || initialized || loading) {
+		return;
+	}
+
+	void ensure_loaded();
 }
 
-function persist_statuses() {
-	save_statuses(shopping_item_statuses);
+async function sync_remote_plan(plan: MealPlan) {
+	if (!plan.id) {
+		return;
+	}
+
+	try {
+		const response = await mealPlansApi.update(plan.id, {
+			name: plan.name,
+			period: to_backend_period(plan.period),
+			start_date: plan.start_date ?? null,
+			end_date: plan.end_date ?? null,
+			profile_id: normalize_profile_id(plan.household_id),
+			recipes: plan.entries.map((entry) =>
+				ui_entry_to_backend_recipe_slot(entry),
+			),
+		});
+
+		const next_plan = backend_meal_plan_to_ui_plan(response.data);
+		meal_plans = meal_plans.map((current_plan) =>
+			current_plan.id === next_plan.id ? next_plan : current_plan,
+		);
+		await refresh_shopping_list(next_plan.id);
+	} catch {
+		return;
+	}
+}
+
+function schedule_remote_sync(plan: MealPlan) {
+	void sync_remote_plan(plan);
+}
+
+function update_local_plan(
+	plan_id: string,
+	updater: (plan: MealPlan) => MealPlan,
+) {
+	let next_plan: MealPlan | null = null;
+
+	meal_plans = meal_plans.map((plan) => {
+		if (plan.id !== plan_id) {
+			return plan;
+		}
+
+		next_plan = updater(plan);
+		return next_plan;
+	});
+
+	if (next_plan) {
+		schedule_remote_sync(next_plan);
+	}
 }
 
 function resolve_active_plan_id(
@@ -210,110 +381,45 @@ function resolve_active_plan_id(
 		}
 	}
 
-	return default_active_plan_id(plans);
-}
-
-function filter_entries_for_plan_window(plan: MealPlan): MealPlanEntry[] {
-	return plan.entries.filter(
-		(entry) => validate_meal_plan_entry_window(entry, plan).ok,
-	);
+	return plans[0]?.id ?? "";
 }
 
 function update_active_plan_range(
-	household_id: string,
 	updates: Pick<MealPlan, "planning_preset" | "start_date" | "end_date">,
 ) {
-	const current_plan = get_active_plan(
-		meal_plans,
-		active_plan_id,
-		household_id,
-	);
+	const current_plan = get_active_plan(meal_plans, active_plan_id);
 	const next_plan: MealPlan = {
 		...current_plan,
 		...updates,
 	};
-	const filtered_entries = filter_entries_for_plan_window(next_plan);
+	const filtered_entries = next_plan.entries.filter(
+		(entry) => validate_meal_plan_entry_window(entry, next_plan).ok,
+	);
 	const removed_entries = current_plan.entries.length - filtered_entries.length;
 
-	meal_plans = meal_plans.map((plan) =>
-		plan.id === current_plan.id
-			? {
-					...next_plan,
-					entries: filtered_entries,
-				}
-			: plan,
-	);
-	persist_plans();
+	update_local_plan(current_plan.id, () => ({
+		...next_plan,
+		entries: filtered_entries,
+	}));
 
 	return { removedEntries: removed_entries };
 }
 
-function update_plan(household_id: string, updates: Partial<MealPlan>) {
-	const current_plan = get_active_plan(
-		meal_plans,
-		active_plan_id,
-		household_id,
+function update_plan(updates: Partial<MealPlan>) {
+	const current_plan = get_active_plan(meal_plans, active_plan_id);
+	update_local_plan(current_plan.id, (plan) => ({ ...plan, ...updates }));
+}
+
+function merge_recipe_catalog(recipes: Recipe[]) {
+	const existing_recipes_by_id = new Map(
+		recipe_catalog.map((recipe) => [recipe.id, recipe]),
 	);
-	meal_plans = meal_plans.map((plan) =>
-		plan.id === current_plan.id ? { ...plan, ...updates } : plan,
-	);
-	persist_plans();
-}
 
-function build_entry_id(): string {
-	return crypto.randomUUID();
-}
+	for (const recipe of recipes) {
+		existing_recipes_by_id.set(recipe.id, recipe);
+	}
 
-function build_plan_id(): string {
-	return `meal-plan-${crypto.randomUUID()}`;
-}
-
-function build_plan_name(plans: MealPlan[], household_name: string): string {
-	return `${household_name} Plan ${plans.length + 1}`;
-}
-
-function build_series_id(): string {
-	return `series-${crypto.randomUUID()}`;
-}
-
-function build_empty_plan(
-	plans: MealPlan[],
-	household: { id: string; name: string },
-): MealPlan {
-	const range = get_preset_range("this_week");
-	const household_plans = get_plans_for_household(plans, household.id);
-
-	return {
-		id: build_plan_id(),
-		household_id: household.id,
-		name: build_plan_name(household_plans, household.name),
-		period: "week",
-		planning_preset: "this_week",
-		start_date: range.start_date,
-		end_date: range.end_date,
-		entries: [],
-	};
-}
-
-function build_status_key(plan_id: string, ingredient_id: string): string {
-	return `${plan_id}:${ingredient_id}`;
-}
-
-function get_active_plan_statuses(
-	household_id: string,
-): Record<string, ShoppingItemStatus> {
-	const current_plan = get_active_plan(
-		meal_plans,
-		active_plan_id,
-		household_id,
-	);
-	const prefix = `${current_plan.id}:`;
-
-	return Object.fromEntries(
-		Object.entries(shopping_item_statuses)
-			.filter(([key]) => key.startsWith(prefix))
-			.map(([key, value]) => [key.slice(prefix.length), value]),
-	) as Record<string, ShoppingItemStatus>;
+	recipe_catalog = [...existing_recipes_by_id.values()];
 }
 
 export function useMealPlanStore() {
@@ -321,6 +427,12 @@ export function useMealPlanStore() {
 	const household_profile = useHouseholdProfileStore();
 
 	return {
+		get isLoading() {
+			return loading;
+		},
+		async ensureReady() {
+			await ensure_loaded();
+		},
 		get allMealPlans() {
 			return meal_plans;
 		},
@@ -331,28 +443,30 @@ export function useMealPlanStore() {
 			);
 		},
 		get activePlanId() {
-			return get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			).id;
+			return get_active_plan(meal_plans, active_plan_id).id;
 		},
 		get mealPlan() {
-			return get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			);
+			return get_active_plan(meal_plans, active_plan_id);
 		},
 		get recipes() {
-			return mock_recipes;
+			return recipe_catalog;
+		},
+		mergeRecipes(recipes: Recipe[]) {
+			merge_recipe_catalog(recipes);
+		},
+		replaceEntries(entries: MealPlanEntry[]) {
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
+			const valid_entries = entries.filter(
+				(entry) => validate_meal_plan_entry_window(entry, current_plan).ok,
+			);
+
+			update_local_plan(current_plan.id, (plan) => ({
+				...plan,
+				entries: valid_entries,
+			}));
 		},
 		get conflicts() {
-			const current_plan = get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			);
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
 			return detect_meal_plan_conflicts(
 				current_plan.entries,
 				current_plan.start_date,
@@ -360,19 +474,21 @@ export function useMealPlanStore() {
 			);
 		},
 		get shoppingList() {
-			const current_plan = get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
+			const statuses = get_active_plan_statuses(
+				current_plan.id,
+				shopping_item_statuses,
 			);
-			return calculate_shopping_list(
-				mock_recipes,
-				current_plan,
-				get_active_plan_statuses(household_profile.activeHouseholdId),
-			);
+			const remote_items = shopping_lists_by_plan_id[current_plan.id];
+
+			if (remote_items) {
+				return apply_statuses(remote_items, statuses);
+			}
+
+			return calculate_shopping_list(recipe_catalog, current_plan, statuses);
 		},
 		get shoppingItemStatuses() {
-			return get_active_plan_statuses(household_profile.activeHouseholdId);
+			return get_active_plan_statuses(active_plan_id, shopping_item_statuses);
 		},
 		selectPlan(plan_id: string) {
 			if (!meal_plans.some((plan) => plan.id === plan_id)) {
@@ -380,38 +496,33 @@ export function useMealPlanStore() {
 			}
 
 			active_plan_id = plan_id;
-			persist_plans();
+			save_active_plan_id(active_plan_id);
+			void refresh_shopping_list(plan_id);
 		},
-		createPlan(household_id = household_profile.activeHouseholdId) {
-			const household =
-				household_profile.profiles.find(
-					(profile) => profile.id === household_id,
-				) ?? household_profile.profile;
-			const next_plan = build_empty_plan(meal_plans, household);
-			meal_plans = [next_plan, ...meal_plans];
-			active_plan_id = next_plan.id;
-			persist_plans();
+		async createPlan(household_id = household_profile.activeHouseholdId) {
+			await ensure_loaded();
+			return create_remote_plan(build_plan_name(meal_plans), household_id);
 		},
 		setPeriod(period: MealPlan["period"]) {
-			update_plan(household_profile.activeHouseholdId, { period });
+			update_plan({ period });
 		},
 		setPlanningPreset(preset: PlanningPreset) {
 			const range = get_preset_range(preset);
-			return update_active_plan_range(household_profile.activeHouseholdId, {
+			return update_active_plan_range({
 				planning_preset: preset,
 				start_date: range.start_date,
 				end_date: range.end_date,
 			});
 		},
 		setCustomRange(start_date: string, end_date: string) {
-			return update_active_plan_range(household_profile.activeHouseholdId, {
+			return update_active_plan_range({
 				planning_preset: "custom_range",
 				start_date,
 				end_date,
 			});
 		},
 		setName(name: string) {
-			update_plan(household_profile.activeHouseholdId, { name });
+			update_plan({ name });
 		},
 		addEntry(entry: {
 			recipe_id: string;
@@ -420,11 +531,7 @@ export function useMealPlanStore() {
 			servings?: number;
 			recurrence_rule?: RecurrenceRule;
 		}): PlanWindowValidationResult {
-			const current_plan = get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			);
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
 			const next_entry: MealPlanEntry = {
 				id: build_entry_id(),
 				recipe_id: entry.recipe_id,
@@ -443,23 +550,18 @@ export function useMealPlanStore() {
 				return validation;
 			}
 
-			meal_plans = meal_plans.map((plan) =>
-				plan.id === current_plan.id
-					? { ...plan, entries: [...plan.entries, next_entry] }
-					: plan,
-			);
-			persist_plans();
+			update_local_plan(current_plan.id, (plan) => ({
+				...plan,
+				entries: [...plan.entries, next_entry],
+			}));
+
 			return { ok: true };
 		},
 		updateEntry(
 			entry_id: string,
 			updates: Partial<MealPlanEntry>,
 		): PlanWindowValidationResult {
-			const current_plan = get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			);
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
 			const current_entry = current_plan.entries.find(
 				(entry) => entry.id === entry_id,
 			);
@@ -478,28 +580,20 @@ export function useMealPlanStore() {
 				return validation;
 			}
 
-			meal_plans = meal_plans.map((plan) =>
-				plan.id === current_plan.id
-					? {
-							...plan,
-							entries: plan.entries.map((entry) =>
-								entry.id === entry_id ? { ...entry, ...updates } : entry,
-							),
-						}
-					: plan,
-			);
-			persist_plans();
+			update_local_plan(current_plan.id, (plan) => ({
+				...plan,
+				entries: plan.entries.map((entry) =>
+					entry.id === entry_id ? { ...entry, ...updates } : entry,
+				),
+			}));
+
 			return { ok: true };
 		},
 		updateSeries(
 			series_id: string,
 			updates: Partial<MealPlanEntry>,
 		): PlanWindowValidationResult {
-			const current_plan = get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			);
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
 			const series_entries = current_plan.entries.filter(
 				(entry) => entry.series_id === series_id,
 			);
@@ -520,79 +614,49 @@ export function useMealPlanStore() {
 				);
 			}
 
-			meal_plans = meal_plans.map((plan) =>
-				plan.id === current_plan.id
-					? {
-							...plan,
-							entries: plan.entries.map((entry) =>
-								entry.series_id === series_id
-									? { ...entry, ...updates }
-									: entry,
-							),
-						}
-					: plan,
-			);
-			persist_plans();
+			update_local_plan(current_plan.id, (plan) => ({
+				...plan,
+				entries: plan.entries.map((entry) =>
+					entry.series_id === series_id ? { ...entry, ...updates } : entry,
+				),
+			}));
+
 			return { ok: true };
 		},
 		removeEntry(entry_id: string) {
-			const current_plan = get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			);
-			meal_plans = meal_plans.map((plan) =>
-				plan.id === current_plan.id
-					? {
-							...plan,
-							entries: plan.entries.filter((entry) => entry.id !== entry_id),
-						}
-					: plan,
-			);
-			persist_plans();
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
+			update_local_plan(current_plan.id, (plan) => ({
+				...plan,
+				entries: plan.entries.filter((entry) => entry.id !== entry_id),
+			}));
 		},
 		setShoppingItemStatus(ingredient_id: string, status: ShoppingItemStatus) {
-			const current_plan = get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			);
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
 			shopping_item_statuses = {
 				...shopping_item_statuses,
 				[build_status_key(current_plan.id, ingredient_id)]: status,
 			};
-			persist_statuses();
+			save_statuses(shopping_item_statuses);
 		},
 		clearPlan() {
-			const current_plan = get_active_plan(
-				meal_plans,
-				active_plan_id,
-				household_profile.activeHouseholdId,
-			);
-			meal_plans = meal_plans.map((plan) =>
-				plan.id === current_plan.id ? { ...plan, entries: [] } : plan,
-			);
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
+			update_local_plan(current_plan.id, (plan) => ({
+				...plan,
+				entries: [],
+			}));
 			shopping_item_statuses = Object.fromEntries(
 				Object.entries(shopping_item_statuses).filter(
 					([key]) => !key.startsWith(`${current_plan.id}:`),
 				),
 			) as Record<string, ShoppingItemStatus>;
-			persist_plans();
-			persist_statuses();
+			save_statuses(shopping_item_statuses);
 		},
 		deleteCurrentPlan() {
-			const household_plans = get_plans_for_household(
-				meal_plans,
-				household_profile.activeHouseholdId,
-			);
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
 
-			if (household_plans.length === 0) {
+			if (!current_plan.id) {
 				return false;
 			}
-
-			const current_plan =
-				household_plans.find((plan) => plan.id === active_plan_id) ??
-				household_plans[0];
 
 			meal_plans = meal_plans.filter((plan) => plan.id !== current_plan.id);
 			shopping_item_statuses = Object.fromEntries(
@@ -604,8 +668,14 @@ export function useMealPlanStore() {
 				meal_plans,
 				household_profile.activeHouseholdId,
 			);
-			persist_plans();
-			persist_statuses();
+			save_active_plan_id(active_plan_id);
+			save_statuses(shopping_item_statuses);
+			void mealPlansApi.delete(current_plan.id);
+
+			if (meal_plans.length === 0) {
+				void create_remote_plan("My plan");
+			}
+
 			return true;
 		},
 		deleteHouseholdPlans(
@@ -630,15 +700,18 @@ export function useMealPlanStore() {
 				),
 			) as Record<string, ShoppingItemStatus>;
 			active_plan_id = resolve_active_plan_id(meal_plans, next_household_id);
-			persist_plans();
-			persist_statuses();
+			save_active_plan_id(active_plan_id);
+			save_statuses(shopping_item_statuses);
+
+			for (const plan_id of deleted_plan_ids) {
+				void mealPlansApi.delete(plan_id);
+			}
 		},
 		reset() {
-			meal_plans = default_plans();
-			active_plan_id = default_active_plan_id(meal_plans);
 			shopping_item_statuses = {};
-			persist_plans();
-			persist_statuses();
+			save_statuses(shopping_item_statuses);
+			initialized = false;
+			void ensure_loaded();
 		},
 	};
 }

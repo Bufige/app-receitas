@@ -11,5 +11,6 @@ export type RequestPaginatedResponse<T> = {
 	meta: {
 		page: number;
 		limit: number;
+		total?: number;
 	};
 };

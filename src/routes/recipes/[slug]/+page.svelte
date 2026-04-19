@@ -3,13 +3,16 @@
 	import Button from "$lib/components/ui/Button/index.svelte";
 	import PageHero from "$lib/components/ui/PageHero/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
-	import { get_recipe_by_slug } from "$lib/mocks/recipes";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import { get_recipe_tag_label } from "$lib/utils/recipe-tags";
 
+	const meal_plan_store = useMealPlanStore();
 	const recipe = $derived(
-		page.params.slug ? get_recipe_by_slug(page.params.slug) : undefined,
+		meal_plan_store.recipes.find(
+			(candidate) => candidate.slug === page.params.slug,
+		),
 	);
 </script>
 

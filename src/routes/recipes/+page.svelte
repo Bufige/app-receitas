@@ -5,17 +5,19 @@
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import Input from "$lib/components/ui/Input/index.svelte";
 	import PageHero from "$lib/components/ui/PageHero/index.svelte";
-	import { mock_recipes } from "$lib/mocks/recipes";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import { get_recipe_tag_label } from "$lib/utils/recipe-tags";
 
+	const meal_plan_store = useMealPlanStore();
 	let search = $state("");
+	const recipes = $derived(meal_plan_store.recipes);
 
 	function normalize_tags(tags: string[]) {
 		return [...new Set(tags)]
 			.filter((tag) =>
-				mock_recipes.some((recipe) => (recipe.tags ?? []).includes(tag)),
+				recipes.some((recipe) => (recipe.tags ?? []).includes(tag)),
 			)
 			.sort();
 	}
@@ -32,7 +34,7 @@
 	const all_tags = $derived.by(() => {
 		const unique_tags = new Set<string>();
 
-		for (const recipe of mock_recipes) {
+		for (const recipe of recipes) {
 			for (const tag of recipe.tags ?? []) {
 				unique_tags.add(tag);
 			}
@@ -66,7 +68,7 @@
 	const filtered_recipes = $derived.by(() => {
 		const normalized_query = search.trim().toLowerCase();
 
-		return mock_recipes.filter((recipe) => {
+		return recipes.filter((recipe) => {
 			const haystack = [
 				recipe.name,
 				recipe.description ?? "",
