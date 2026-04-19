@@ -1,6 +1,7 @@
 // Breakpoints (mobile-first: min-width)
 $xs: 390px;
 $phone-lg: 430px;
+$phone-xl: 480px;
 $sm: 640px;
 $md: 768px;
 $lg: 1024px;
@@ -49,6 +50,7 @@ $xxl: 1536px;
 	$side: top,
 	$xs: null,
 	$phone-lg: null,
+	$phone-xl: null,
 	$sm: null,
 	$md: null,
 	$lg: null,
@@ -67,6 +69,12 @@ $xxl: 1536px;
 	@if $phone-lg !=null {
 		@include phone-lg {
 			#{$property}: calc(#{$phone-lg} + safe-area($side, $fallback));
+		}
+	}
+
+	@if $phone-xl !=null {
+		@include phone-xl {
+			#{$property}: calc(#{$phone-xl} + safe-area($side, $fallback));
 		}
 	}
 
@@ -116,6 +124,12 @@ $xxl: 1536px;
 
 @mixin phone-lg {
 	@media (min-width: $phone-lg) {
+		@content;
+	}
+}
+
+@mixin phone-xl {
+	@media (min-width: $phone-xl) {
 		@content;
 	}
 }

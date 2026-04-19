@@ -738,9 +738,10 @@
 		&.mobile-summary-visible {
 			@include responsive-safe-area-offset(
 				padding-top,
-				13.25rem,
+				13.5rem,
 				$xs: 12.5rem,
-				$phone-lg: 11.5rem,
+				$phone-lg: 11.75rem,
+				$phone-xl: 10.75rem,
 				$sm: 9rem
 			);
 		}

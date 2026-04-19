@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { useQueryClient } from "@tanstack/svelte-query";
 	import cartOutline from "@iconify-icons/mdi/cart-outline";
 	import deleteOutline from "@iconify-icons/mdi/delete-outline";
 	import magnify from "@iconify-icons/mdi/magnify";
 	import Icon from "@iconify/svelte";
 	import { browser } from "$app/environment";
+	import { recipesApi } from "$lib/api/recipes";
 	import Button from "$lib/components/ui/Button/index.svelte";
 	import Input from "$lib/components/ui/Input/index.svelte";
 	import Modal from "$lib/components/ui/Modal/index.svelte";
@@ -11,20 +13,22 @@
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import { queryKeys } from "$lib/queries/keys";
 	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
-	import type { Recipe } from "$lib/types/recipe";
-	import { announce } from "$lib/utils/announce";
-	import {
-		build_recipe_pool,
-		collect_plan_dates,
-	} from "$lib/utils/recipe-generation";
 	import type {
 		ExpandedMealPlanEntry,
 		MealPlanEntry,
 		MealType,
 		PlanningPreset,
 	} from "$lib/types/planning";
+	import type { Recipe } from "$lib/types/recipe";
+	import { announce } from "$lib/utils/announce";
+	import { backend_recipe_to_ui_recipe } from "$lib/utils/backend-adapters";
+	import {
+		build_recipe_pool,
+		collect_plan_dates,
+	} from "$lib/utils/recipe-generation";
 	import {
 		expand_meal_plan_entries,
 		format_iso_date,
@@ -36,8 +40,11 @@
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
+	const query_client = useQueryClient();
 	const meal_types: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
 	const generated_meal_types: MealType[] = ["lunch", "dinner"];
+	const RECIPE_SEARCH_LIMIT = 5;
+	const RECIPE_SEARCH_DEBOUNCE_MS = 250;
 	type CalendarRangeAction = "month" | "two_weeks" | "week";
 	type DayMealDraft = {
 		local_id: string;
@@ -53,7 +60,15 @@
 	let selected_day = $state<OverviewDay | null>(null);
 	let day_meal_drafts = $state<DayMealDraft[]>([]);
 	let day_modal_feedback = $state<string | null>(null);
+	let recipe_search_results = $state<Record<string, Recipe[]>>({});
+	let recipe_search_loading = $state<Record<string, boolean>>({});
 	let next_day_draft_count = 0;
+	let next_recipe_search_request_id = 0;
+	const recipe_search_timeouts = new Map<
+		string,
+		ReturnType<typeof setTimeout>
+	>();
+	const recipe_search_request_ids = new Map<string, number>();
 
 	type OverviewDay = {
 		date: string;
@@ -329,6 +344,7 @@
 	}
 
 	function close_day_modal() {
+		clear_recipe_search_state();
 		selected_day = null;
 		day_meal_drafts = [];
 		day_modal_feedback = null;
@@ -397,39 +413,210 @@
 	}
 
 	function remove_day_meal_draft(local_id: string) {
+		clear_recipe_search_state(local_id);
 		day_meal_drafts = day_meal_drafts.filter(
 			(draft) => draft.local_id !== local_id,
 		);
 		day_modal_feedback = null;
 	}
 
-	function get_filtered_recipes(
-		search_query: string,
-		selected_recipe_id: string,
-	): Recipe[] {
-		const normalized_query = search_query.trim().toLowerCase();
-		const selected_recipe = meal_plan_store.recipes.find(
+	function get_selected_recipe(selected_recipe_id: string): Recipe | undefined {
+		return meal_plan_store.recipes.find(
 			(recipe) => recipe.id === selected_recipe_id,
 		);
-		const matches = normalized_query
-			? meal_plan_store.recipes.filter((recipe) => {
-					const haystack = [recipe.name, ...(recipe.tags ?? [])]
-						.join(" ")
-						.toLowerCase();
+	}
 
-					return haystack.includes(normalized_query);
-				})
-			: meal_plan_store.recipes;
+	function include_selected_recipe(
+		recipes: Recipe[],
+		selected_recipe_id: string,
+	): Recipe[] {
+		const selected_recipe = get_selected_recipe(selected_recipe_id);
 
 		if (
 			selected_recipe &&
-			!matches.some((recipe) => recipe.id === selected_recipe.id)
+			!recipes.some((recipe) => recipe.id === selected_recipe.id)
 		) {
-			return [selected_recipe, ...matches];
+			return [selected_recipe, ...recipes];
 		}
 
-		return matches;
+		return recipes;
 	}
+
+	function clear_recipe_search_timeout(local_id: string) {
+		const timeout_id = recipe_search_timeouts.get(local_id);
+
+		if (timeout_id) {
+			clearTimeout(timeout_id);
+			recipe_search_timeouts.delete(local_id);
+		}
+	}
+
+	function clear_recipe_search_state(local_id?: string) {
+		if (local_id) {
+			clear_recipe_search_timeout(local_id);
+			recipe_search_request_ids.delete(local_id);
+
+			const { [local_id]: _ignored_result, ...next_results } =
+				recipe_search_results;
+			const { [local_id]: _ignored_loading, ...next_loading } =
+				recipe_search_loading;
+
+			recipe_search_results = next_results;
+			recipe_search_loading = next_loading;
+			return;
+		}
+
+		for (const local_recipe_search_id of recipe_search_timeouts.keys()) {
+			clear_recipe_search_timeout(local_recipe_search_id);
+		}
+
+		recipe_search_request_ids.clear();
+		recipe_search_results = {};
+		recipe_search_loading = {};
+	}
+
+	async function fetch_recipe_search_results(
+		local_id: string,
+		search_query: string,
+	) {
+		const normalized_query = search_query.trim();
+
+		if (!normalized_query) {
+			clear_recipe_search_state(local_id);
+			return;
+		}
+
+		const request_id = next_recipe_search_request_id + 1;
+		next_recipe_search_request_id = request_id;
+		recipe_search_request_ids.set(local_id, request_id);
+		recipe_search_loading = {
+			...recipe_search_loading,
+			[local_id]: true,
+		};
+
+		clear_recipe_search_timeout(local_id);
+
+		const timeout_id = setTimeout(async () => {
+			try {
+				const response = await query_client.fetchQuery({
+					queryKey: queryKeys.recipes.list({
+						query: normalized_query,
+						limit: RECIPE_SEARCH_LIMIT,
+					}),
+					queryFn: () =>
+						recipesApi.list({
+							query: normalized_query,
+							limit: RECIPE_SEARCH_LIMIT,
+						}),
+					staleTime: 1000 * 60,
+				});
+
+				if (recipe_search_request_ids.get(local_id) !== request_id) {
+					return;
+				}
+
+				const next_results = response.data.map((recipe) =>
+					backend_recipe_to_ui_recipe(recipe),
+				);
+
+				meal_plan_store.mergeRecipes(next_results);
+				recipe_search_results = {
+					...recipe_search_results,
+					[local_id]: next_results,
+				};
+			} catch {
+				if (recipe_search_request_ids.get(local_id) !== request_id) {
+					return;
+				}
+
+				recipe_search_results = {
+					...recipe_search_results,
+					[local_id]: [],
+				};
+			} finally {
+				if (recipe_search_request_ids.get(local_id) !== request_id) {
+					return;
+				}
+
+				recipe_search_loading = {
+					...recipe_search_loading,
+					[local_id]: false,
+				};
+				recipe_search_timeouts.delete(local_id);
+			}
+		}, RECIPE_SEARCH_DEBOUNCE_MS);
+
+		recipe_search_timeouts.set(local_id, timeout_id);
+	}
+
+	function handle_recipe_search_input(local_id: string, event: Event) {
+		const search_query = (event.currentTarget as HTMLInputElement).value;
+		const selected_recipe_id =
+			day_meal_drafts.find((draft) => draft.local_id === local_id)?.recipe_id ??
+			"";
+
+		update_day_draft(local_id, { search_query });
+
+		void fetch_recipe_search_results(local_id, search_query);
+		if (!search_query.trim() && selected_recipe_id) {
+			recipe_search_results = {
+				...recipe_search_results,
+				[local_id]: include_selected_recipe([], selected_recipe_id),
+			};
+		}
+	}
+
+	function get_filtered_recipes(
+		local_id: string,
+		search_query: string,
+		selected_recipe_id: string,
+	): Recipe[] {
+		if (!search_query.trim()) {
+			return meal_plan_store.recipes;
+		}
+
+		return include_selected_recipe(
+			recipe_search_results[local_id] ?? [],
+			selected_recipe_id,
+		);
+	}
+
+	function get_overlay_search_results(
+		local_id: string,
+		search_query: string,
+		selected_recipe_id: string,
+	): Recipe[] {
+		if (!search_query.trim()) {
+			return [];
+		}
+
+		return (recipe_search_results[local_id] ?? []).filter(
+			(recipe) => recipe.id !== selected_recipe_id,
+		);
+	}
+
+	function select_recipe_search_result(local_id: string, recipe: Recipe) {
+		update_day_draft(local_id, {
+			recipe_id: recipe.id,
+			search_query: "",
+		});
+		clear_recipe_search_state(local_id);
+	}
+
+	function should_show_recipe_search_results(
+		local_id: string,
+		search_query: string,
+	) {
+		return (
+			Boolean(search_query.trim()) || Boolean(recipe_search_loading[local_id])
+		);
+	}
+
+	$effect(() => {
+		return () => {
+			clear_recipe_search_state();
+		};
+	});
 
 	function save_day_meal_changes() {
 		if (!selected_day) {
@@ -861,17 +1048,54 @@
 							</button>
 						</div>
 
-						<Input
-							id={`recipe-search-${draft.local_id}`}
-							label={m.recipes_search_label()}
-							placeholder={m.recipes_search_placeholder()}
-							icon={magnify}
-							value={draft.search_query}
-							oninput={(event) =>
-								update_day_draft(draft.local_id, {
-									search_query: (event.currentTarget as HTMLInputElement).value,
-								})}
-						/>
+						<div class="recipe-search-field">
+							<Input
+								id={`recipe-search-${draft.local_id}`}
+								label={m.recipes_search_label()}
+								placeholder={m.recipes_search_placeholder()}
+								icon={magnify}
+								value={draft.search_query}
+								oninput={(event) =>
+									handle_recipe_search_input(draft.local_id, event)}
+							/>
+
+							{#if should_show_recipe_search_results(draft.local_id, draft.search_query)}
+								<div
+									class="recipe-search-results"
+									role="listbox"
+									aria-label={m.planner_recipe_label()}
+								>
+									{#if recipe_search_loading[draft.local_id]}
+										<div class="recipe-search-loading" aria-live="polite">
+											<span class="recipe-search-loading-dot"></span>
+											<span class="recipe-search-loading-dot"></span>
+											<span class="recipe-search-loading-dot"></span>
+											<span class="sr-only">{m.planner_recipe_label()}</span>
+										</div>
+									{:else if get_overlay_search_results(draft.local_id, draft.search_query, draft.recipe_id).length === 0}
+										<p class="recipe-search-empty">{m.recipes_empty()}</p>
+									{:else}
+										<div class="recipe-search-list">
+											{#each get_overlay_search_results(draft.local_id, draft.search_query, draft.recipe_id) as recipe}
+												<button
+													type="button"
+													class="recipe-search-option"
+													role="option"
+													aria-selected="false"
+													onclick={() =>
+														select_recipe_search_result(draft.local_id, recipe)}
+												>
+													<span class="recipe-search-name">{recipe.name}</span>
+													<span class="recipe-search-meta">
+														{recipe.preparation_time_in_minutes}
+													</span>
+												</button>
+											{/each}
+										</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
 
 						<div class="day-edit-grid">
 							<div class="field-group">
@@ -887,10 +1111,10 @@
 												.value,
 										})}
 								>
-									{#if get_filtered_recipes(draft.search_query, draft.recipe_id).length === 0}
+									{#if get_filtered_recipes(draft.local_id, draft.search_query, draft.recipe_id).length === 0}
 										<option value={draft.recipe_id}>{m.recipes_empty()}</option>
 									{:else}
-										{#each get_filtered_recipes(draft.search_query, draft.recipe_id) as recipe}
+										{#each get_filtered_recipes(draft.local_id, draft.search_query, draft.recipe_id) as recipe}
 											<option value={recipe.id}>{recipe.name}</option>
 										{/each}
 									{/if}
@@ -1319,6 +1543,114 @@
 		border-radius: 18px;
 		border: 1px solid var(--border);
 		background: color-mix(in srgb, var(--surface) 96%, transparent);
+	}
+
+	.recipe-search-field {
+		position: relative;
+		z-index: 5;
+	}
+
+	.recipe-search-results {
+		position: absolute;
+		top: calc(100% + 0.4rem);
+		left: 0;
+		right: 0;
+		z-index: 20;
+		display: grid;
+		gap: 0.65rem;
+		padding: 0.75rem;
+		border-radius: 16px;
+		border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+		background: color-mix(in srgb, var(--surface-muted) 72%, var(--surface));
+		box-shadow: var(--high-box-shadow);
+		max-height: min(18rem, 42dvh);
+		overflow-y: auto;
+	}
+
+	.recipe-search-loading {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		min-height: 1.25rem;
+	}
+
+	.recipe-search-loading-dot {
+		width: 0.45rem;
+		height: 0.45rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--primary) 70%, var(--surface));
+		animation: recipe-search-pulse 1s ease-in-out infinite;
+
+		&:nth-child(2) {
+			animation-delay: 120ms;
+		}
+
+		&:nth-child(3) {
+			animation-delay: 240ms;
+		}
+	}
+
+	.recipe-search-empty {
+		font-size: 0.9rem;
+		color: var(--text-muted);
+	}
+
+	.recipe-search-list {
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.recipe-search-option {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		width: 100%;
+		padding: 0.75rem 0.85rem;
+		border-radius: 14px;
+		border: 1px solid var(--border);
+		background: color-mix(in srgb, var(--surface) 94%, transparent);
+		color: var(--text);
+		text-align: left;
+		cursor: pointer;
+		transition:
+			border-color var(--motion-base, 180ms) var(--ease-emphasized, ease),
+			background-color var(--motion-base, 180ms) var(--ease-emphasized, ease),
+			transform var(--motion-base, 180ms) var(--ease-emphasized, ease);
+
+		&:hover {
+			transform: translateY(-1px);
+			border-color: color-mix(in srgb, var(--primary) 24%, var(--border));
+		}
+
+		&:focus-visible {
+			outline: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
+			outline-offset: 2px;
+		}
+	}
+
+	.recipe-search-name {
+		font-weight: 600;
+	}
+
+	.recipe-search-meta {
+		flex-shrink: 0;
+		font-size: 0.82rem;
+		color: var(--text-muted);
+	}
+
+	@keyframes recipe-search-pulse {
+		0%,
+		80%,
+		100% {
+			opacity: 0.35;
+			transform: scale(0.9);
+		}
+
+		40% {
+			opacity: 1;
+			transform: scale(1);
+		}
 	}
 
 	.day-edit-card-header {
