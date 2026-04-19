@@ -489,8 +489,8 @@ export function useMealPlanStore() {
 				start_date: options.start_date,
 				end_date: options.end_date,
 			};
-			const valid_entries = options.entries.filter((entry) =>
-				validate_meal_plan_entry_window(entry, next_plan).ok,
+			const valid_entries = options.entries.filter(
+				(entry) => validate_meal_plan_entry_window(entry, next_plan).ok,
 			);
 
 			clear_plan_statuses(current_plan.id);
