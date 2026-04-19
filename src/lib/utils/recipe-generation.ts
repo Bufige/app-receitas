@@ -1,4 +1,5 @@
 import type { Recipe } from "$lib/types/recipe";
+import { parse_iso_date } from "$lib/utils/planning";
 import { infer_recipe_location } from "$lib/utils/recipe-location";
 
 function shuffle_recipes(recipes: Recipe[]): Recipe[] {
@@ -53,8 +54,8 @@ export function collect_plan_dates(
 	}
 
 	const dates: string[] = [];
-	const current_date = new Date(`${start_date}T12:00:00`);
-	const last_date = new Date(`${end_date}T12:00:00`);
+	const current_date = parse_iso_date(start_date);
+	const last_date = parse_iso_date(end_date);
 
 	while (current_date <= last_date && dates.length < limit) {
 		dates.push(current_date.toISOString().slice(0, 10));

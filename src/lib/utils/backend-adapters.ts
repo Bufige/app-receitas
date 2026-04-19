@@ -39,6 +39,14 @@ const day_name_by_index: BackendMealDayOfWeek[] = [
 	"saturday",
 ];
 
+function normalize_backend_date(value?: string | null): string | undefined {
+	if (!value) {
+		return undefined;
+	}
+
+	return value.slice(0, 10);
+}
+
 function normalize_unit(unit: BackendIngredientUnit): IngredientUnit {
 	if (unit === "g" || unit === "kg" || unit === "ml" || unit === "l") {
 		return unit;
@@ -135,22 +143,25 @@ export function backend_recipe_slot_to_entry(
 	meal_plan: Pick<BackendMealPlan, "start_date" | "end_date">,
 	recipe_slot: BackendMealPlanRecipe,
 ): MealPlanEntry {
+	const normalized_start_date = normalize_backend_date(meal_plan.start_date);
+	const normalized_end_date = normalize_backend_date(meal_plan.end_date);
+
 	return {
 		id: recipe_slot.id,
 		recipe_id: recipe_slot.recipe_id,
 		date: find_first_occurrence_date(
-			meal_plan.start_date ?? undefined,
-			meal_plan.end_date ?? undefined,
+			normalized_start_date,
+			normalized_end_date,
 			recipe_slot.day_of_week,
 		),
 		meal_type: recipe_slot.meal_time as MealType,
 		servings: recipe_slot.servings,
 		recurrence_rule:
-			meal_plan.start_date && meal_plan.end_date
+			normalized_start_date && normalized_end_date
 				? {
 						frequency: "week",
 						interval: 1,
-						ends_on: meal_plan.end_date,
+						ends_on: normalized_end_date,
 					}
 				: undefined,
 		series_id: recipe_slot.id,
@@ -160,14 +171,17 @@ export function backend_recipe_slot_to_entry(
 export function backend_meal_plan_to_ui_plan(
 	meal_plan: BackendMealPlan,
 ): MealPlan {
+	const normalized_start_date = normalize_backend_date(meal_plan.start_date);
+	const normalized_end_date = normalize_backend_date(meal_plan.end_date);
+
 	return {
 		id: meal_plan.id,
 		household_id: meal_plan.profile_id,
 		name: meal_plan.name,
 		period: normalize_period(meal_plan.period),
 		planning_preset: infer_preset(meal_plan.period),
-		start_date: meal_plan.start_date ?? undefined,
-		end_date: meal_plan.end_date ?? undefined,
+		start_date: normalized_start_date,
+		end_date: normalized_end_date,
 		entries:
 			meal_plan.recipes?.map((recipe_slot: BackendMealPlanRecipe) =>
 				backend_recipe_slot_to_entry(meal_plan, recipe_slot),

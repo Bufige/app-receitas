@@ -24,7 +24,9 @@ function clone_date(date: Date): Date {
 }
 
 export function parse_iso_date(value: string): Date {
-	return new Date(`${value}T12:00:00`);
+	const normalized_value = value.includes("T") ? value.slice(0, 10) : value;
+
+	return new Date(`${normalized_value}T12:00:00`);
 }
 
 export function format_iso_date(date: Date): string {
