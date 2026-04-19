@@ -28,9 +28,7 @@
 	);
 	const range_label = $derived.by(() => format_plan_range_label(active_plan));
 	let shopping_layout_element = $state<HTMLElement | null>(null);
-	let overview_panel_element = $state<HTMLElement | null>(null);
 	let desktop_layout_height = $state<number | null>(null);
-	let show_mobile_summary = $state(false);
 	let last_mobile_item_tap = $state<{
 		ingredient_id: string;
 		time: number;
@@ -162,22 +160,6 @@
 		return group.items.filter((item) => item.status === "pending").length;
 	}
 
-	function update_mobile_summary_visibility() {
-		if (
-			!browser ||
-			!overview_panel_element ||
-			shopping_view.items.length === 0
-		) {
-			show_mobile_summary = false;
-			return;
-		}
-
-		const header_offset = window.innerWidth >= 768 ? 64 : 56;
-		const overview_bounds = overview_panel_element.getBoundingClientRect();
-
-		show_mobile_summary = overview_bounds.bottom <= header_offset + 12;
-	}
-
 	function update_desktop_layout_height() {
 		if (
 			!browser ||
@@ -197,25 +179,6 @@
 			320,
 		);
 	}
-
-	$effect(() => {
-		if (
-			!browser ||
-			!overview_panel_element ||
-			shopping_view.items.length === 0
-		) {
-			show_mobile_summary = false;
-			return;
-		}
-
-		const frame_id = window.requestAnimationFrame(() => {
-			update_mobile_summary_visibility();
-		});
-
-		return () => {
-			window.cancelAnimationFrame(frame_id);
-		};
-	});
 
 	$effect(() => {
 		if (!browser) {
@@ -256,39 +219,36 @@
 	});
 </script>
 
-<svelte:window
-	onscroll={update_mobile_summary_visibility}
-	onresize={update_mobile_summary_visibility}
-/>
-
 <SEO
 	title={m.seo_shopping_list_title()}
 	description={m.seo_shopping_list_description()}
 />
 
 <section class="page">
-	<PageHero title={m.shopping_title()} subtitle={m.shopping_subtitle()}>
-		{#snippet actions()}
-			<div class="hero-actions">
-				<Button
-					href={localizeHref("/planner")}
-					variant="primary"
-					size="medium"
-					round
-				>
-					{m.nav_planner()}
-				</Button>
-				<Button
-					href={localizeHref("/planned-meals")}
-					variant="outline"
-					size="medium"
-					round
-				>
-					{m.nav_planned_meals()}
-				</Button>
-			</div>
-		{/snippet}
-	</PageHero>
+	<div class="shopping-hero-shell">
+		<PageHero title={m.shopping_title()} subtitle={m.shopping_subtitle()}>
+			{#snippet actions()}
+				<div class="hero-actions">
+					<Button
+						href={localizeHref("/planner")}
+						variant="primary"
+						size="medium"
+						round
+					>
+						{m.nav_planner()}
+					</Button>
+					<Button
+						href={localizeHref("/planned-meals")}
+						variant="outline"
+						size="medium"
+						round
+					>
+						{m.nav_planned_meals()}
+					</Button>
+				</div>
+			{/snippet}
+		</PageHero>
+	</div>
 
 	{#if shopping_view.items.length === 0}
 		<section class="empty-state surface-panel">
@@ -313,7 +273,7 @@
 			</div>
 		</section>
 	{:else}
-		<div class:visible={show_mobile_summary} class="mobile-shopping-summary">
+		<div class="mobile-shopping-summary">
 			<div class="mobile-shopping-summary__copy">
 				<p>{m.home_feature_shopping_title()}</p>
 				<strong title={active_plan.name}>{active_plan.name}</strong>
@@ -324,6 +284,24 @@
 				<span>
 					{shopping_view.pending_count}
 					{m.shopping_status_pending().toLowerCase()}
+				</span>
+			</div>
+			<div class="mobile-shopping-summary__status-list">
+				<span class="mobile-status-pill is-pending">
+					{shopping_view.pending_count}
+					{m.shopping_status_pending().toLowerCase()}
+				</span>
+				<span class="mobile-status-pill is-bought">
+					{shopping_view.bought_count}
+					{m.shopping_status_bought().toLowerCase()}
+				</span>
+				<span class="mobile-status-pill is-skipped">
+					{shopping_view.skipped_count}
+					{m.shopping_status_skipped().toLowerCase()}
+				</span>
+				<span class="mobile-status-pill is-available">
+					{shopping_view.available_count}
+					{m.shopping_status_already_available().toLowerCase()}
 				</span>
 			</div>
 			<div class="mobile-shopping-summary__track" aria-hidden="true">
@@ -341,10 +319,7 @@
 				? `--desktop-layout-height: ${desktop_layout_height}px`
 				: undefined}
 		>
-			<aside
-				bind:this={overview_panel_element}
-				class="overview-panel surface-panel"
-			>
+			<aside class="overview-panel surface-panel">
 				<div class="overview-copy">
 					<p class="eyebrow">{m.home_feature_shopping_eyebrow()}</p>
 					<h2>{m.home_feature_shopping_title()}</h2>
@@ -411,10 +386,7 @@
 				</p>
 			</aside>
 
-			<div
-				class:mobile-summary-visible={show_mobile_summary}
-				class="group-list-scroll"
-			>
+			<div class="group-list-scroll mobile-summary-visible">
 				<section class="group-list">
 					{#each shopping_view.groups as group}
 						<section class="group-panel surface-panel">
@@ -498,6 +470,14 @@
 		}
 	}
 
+	.shopping-hero-shell {
+		display: none;
+
+		@include md {
+			display: block;
+		}
+	}
+
 	.hero-actions {
 		display: flex;
 		flex-wrap: wrap;
@@ -559,24 +539,12 @@
 		z-index: 90;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 0.6rem 1rem;
+		gap: 0.6rem 0.85rem;
 		padding: 0.85rem 1rem;
 		border-bottom: 1px solid
 			color-mix(in srgb, var(--primary) 14%, var(--border));
 		background: color-mix(in srgb, var(--surface) 94%, transparent);
 		backdrop-filter: blur(18px);
-		transform: translateY(calc(-100% - 0.5rem));
-		opacity: 0;
-		pointer-events: none;
-		transition:
-			transform var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			opacity var(--motion-base, 180ms) var(--ease-emphasized, ease);
-
-		&.visible {
-			transform: translateY(0);
-			opacity: 1;
-			pointer-events: auto;
-		}
 
 		@include md {
 			display: none;
@@ -652,10 +620,36 @@
 		);
 	}
 
-	.overview-panel {
+	.mobile-shopping-summary__status-list {
+		grid-column: 1 / -1;
 		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.45rem;
+	}
+
+	.mobile-status-pill {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 0;
+		padding: 0.45rem 0.55rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: color-mix(in srgb, var(--surface) 96%, transparent);
+		font-size: 0.72rem;
+		font-weight: 700;
+		line-height: 1.1;
+		text-align: center;
+	}
+
+	.overview-panel {
+		display: none;
 		gap: 1rem;
 		height: fit-content;
+
+		@include md {
+			display: grid;
+		}
 
 		@include lg {
 			align-self: start;
@@ -799,27 +793,19 @@
 
 	.group-list-scroll {
 		min-width: 0;
-		padding-top: 0;
+		@include responsive-safe-area-offset(
+			padding-top,
+			10.5rem,
+			$xs: 9.75rem,
+			$phone-lg: 9.25rem,
+			$phone-xl: 8.75rem,
+			$sm: 8rem
+		);
 		transition: padding-top var(--motion-base, 180ms)
 			var(--ease-emphasized, ease);
 
-		&.mobile-summary-visible {
-			@include responsive-safe-area-offset(
-				padding-top,
-				13.5rem,
-				$xs: 12.5rem,
-				$phone-lg: 11.75rem,
-				$phone-xl: 10.75rem,
-				$sm: 9rem
-			);
-		}
-
 		@include md {
 			padding-top: 0;
-
-			&.mobile-summary-visible {
-				padding-top: 0;
-			}
 		}
 
 		@include lg {
