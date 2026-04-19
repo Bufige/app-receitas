@@ -1,19 +1,37 @@
 <script lang="ts">
+	import { createQuery } from "@tanstack/svelte-query";
 	import { page } from "$app/state";
+	import { recipesApi } from "$lib/api/recipes";
 	import Button from "$lib/components/ui/Button/index.svelte";
 	import PageHero from "$lib/components/ui/PageHero/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
+	import { queryKeys } from "$lib/queries/keys";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
+	import { backend_recipe_to_ui_recipe } from "$lib/utils/backend-adapters";
 	import { get_recipe_tag_label } from "$lib/utils/recipe-tags";
 
 	const meal_plan_store = useMealPlanStore();
-	const recipe = $derived(
-		meal_plan_store.recipes.find(
-			(candidate) => candidate.slug === page.params.slug,
-		),
+	const recipe_slug = $derived(page.params.slug ?? "");
+	const fallback_recipe = $derived(
+		meal_plan_store.recipes.find((candidate) => candidate.slug === recipe_slug),
 	);
+	const recipe_query = createQuery(() => ({
+		queryKey: queryKeys.recipes.detail(recipe_slug),
+		queryFn: () => recipesApi.get(recipe_slug),
+		enabled: Boolean(recipe_slug),
+		retry: false,
+	}));
+	const recipe = $derived.by(() => {
+		const backend_recipe = recipe_query.data?.data;
+
+		if (backend_recipe) {
+			return backend_recipe_to_ui_recipe(backend_recipe);
+		}
+
+		return fallback_recipe;
+	});
 </script>
 
 {#if recipe}
@@ -92,6 +110,16 @@
 		>
 			{m.recipe_detail_add_to_plan()}
 		</Button>
+	</section>
+{:else if recipe_query.isPending}
+	<SEO
+		title={m.seo_recipe_detail_title()}
+		description={m.seo_recipe_detail_description()}
+		noindex
+	/>
+
+	<section class="empty-state loading-state" aria-busy="true">
+		<div class="loading-spinner" aria-hidden="true"></div>
 	</section>
 {:else}
 	<SEO
@@ -284,6 +312,27 @@
 
 		p {
 			color: var(--text-muted);
+		}
+	}
+
+	.loading-state {
+		align-items: center;
+		justify-content: center;
+		min-height: 40vh;
+	}
+
+	.loading-spinner {
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 999px;
+		border: 3px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+		border-top-color: var(--primary);
+		animation: spin 0.8s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
 		}
 	}
 </style>

@@ -32,8 +32,8 @@ export const recipesApi = {
 		});
 	},
 
-	get(recipe_id: string) {
-		return api.get<GetRecipeResult>(`/recipes/${recipe_id}`);
+	get(recipe_identifier: string) {
+		return api.get<GetRecipeResult>(`/recipes/${recipe_identifier}`);
 	},
 
 	random(params: {
