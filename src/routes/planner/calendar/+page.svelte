@@ -624,15 +624,23 @@
 		}
 
 		const current_day = selected_day;
+		const existing_entries = meal_types.flatMap((meal_type) =>
+			current_day.slots[meal_type].map((entry) => ({
+				meal_type,
+				entry,
+			})),
+		);
+		const existing_entry_by_id = new Map(
+			existing_entries.map(({ entry }) => [entry.source_entry_id, entry]),
+		);
+		const unmatched_entry_ids_by_meal_type = new Map<MealType, string[]>();
 
-		const original_entry_ids = meal_types.flatMap((meal_type) =>
-			current_day.slots[meal_type].map((entry) => entry.source_entry_id),
-		);
-		const remaining_entry_ids = new Set(
-			day_meal_drafts
-				.map((draft) => draft.entry_id)
-				.filter((entry_id): entry_id is string => Boolean(entry_id)),
-		);
+		for (const meal_type of meal_types) {
+			unmatched_entry_ids_by_meal_type.set(
+				meal_type,
+				current_day.slots[meal_type].map((entry) => entry.source_entry_id),
+			);
+		}
 
 		const used_meal_types = new Set<MealType>();
 
@@ -648,13 +656,43 @@
 			used_meal_types.add(draft.meal_type);
 		}
 
-		for (const entry_id of original_entry_ids) {
-			if (!remaining_entry_ids.has(entry_id)) {
-				meal_plan_store.removeEntry(entry_id);
+		const matched_entry_ids = new Set<string>();
+		const draft_operations = day_meal_drafts.map((draft) => {
+			let matched_entry_id = draft.entry_id;
+
+			if (matched_entry_id && !existing_entry_by_id.has(matched_entry_id)) {
+				matched_entry_id = null;
+			}
+
+			if (!matched_entry_id) {
+				const candidate_entry_ids =
+					unmatched_entry_ids_by_meal_type.get(draft.meal_type) ?? [];
+				matched_entry_id = candidate_entry_ids[0] ?? null;
+			}
+
+			if (matched_entry_id) {
+				matched_entry_ids.add(matched_entry_id);
+				unmatched_entry_ids_by_meal_type.set(
+					draft.meal_type,
+					(unmatched_entry_ids_by_meal_type.get(draft.meal_type) ?? []).filter(
+						(entry_id) => entry_id !== matched_entry_id,
+					),
+				);
+			}
+
+			return {
+				...draft,
+				entry_id: matched_entry_id,
+			};
+		});
+
+		for (const { entry } of existing_entries) {
+			if (!matched_entry_ids.has(entry.source_entry_id)) {
+				meal_plan_store.removeEntry(entry.source_entry_id);
 			}
 		}
 
-		for (const draft of day_meal_drafts) {
+		for (const draft of draft_operations) {
 			if (!draft.recipe_id) {
 				continue;
 			}
@@ -662,6 +700,7 @@
 			const result = draft.entry_id
 				? meal_plan_store.updateEntry(draft.entry_id, {
 						recipe_id: draft.recipe_id,
+						date: draft.date,
 						meal_type: draft.meal_type,
 					})
 				: meal_plan_store.addEntry({

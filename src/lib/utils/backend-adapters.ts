@@ -1,6 +1,5 @@
 import type {
 	BackendIngredientUnit,
-	BackendMealDayOfWeek,
 	BackendMealPeriod,
 	BackendMealPlan,
 	BackendMealPlanRecipe,
@@ -17,27 +16,7 @@ import type {
 	ShoppingListItem,
 } from "$lib/types/planning";
 import type { IngredientUnit, Recipe } from "$lib/types/recipe";
-import { format_iso_date, parse_iso_date } from "$lib/utils/planning";
-
-const day_index_by_name: Record<BackendMealDayOfWeek, number> = {
-	sunday: 0,
-	monday: 1,
-	tuesday: 2,
-	wednesday: 3,
-	thursday: 4,
-	friday: 5,
-	saturday: 6,
-};
-
-const day_name_by_index: BackendMealDayOfWeek[] = [
-	"sunday",
-	"monday",
-	"tuesday",
-	"wednesday",
-	"thursday",
-	"friday",
-	"saturday",
-];
+import { parse_iso_date } from "$lib/utils/planning";
 
 function normalize_backend_date(value?: string | null): string | undefined {
 	if (!value) {
@@ -65,29 +44,6 @@ function infer_preset(
 	period?: BackendMealPeriod | null,
 ): MealPlan["planning_preset"] {
 	return period === "monthly" ? "this_month" : "this_week";
-}
-
-function find_first_occurrence_date(
-	start_date: string | undefined,
-	end_date: string | undefined,
-	day_of_week: BackendMealDayOfWeek,
-): string {
-	const start = parse_iso_date(start_date ?? format_iso_date(new Date()));
-	const end = parse_iso_date(
-		end_date ?? start_date ?? format_iso_date(new Date()),
-	);
-	const current = new Date(start.getTime());
-	const target_index = day_index_by_name[day_of_week];
-
-	while (current <= end) {
-		if (current.getDay() === target_index) {
-			return format_iso_date(current);
-		}
-
-		current.setDate(current.getDate() + 1);
-	}
-
-	return format_iso_date(start);
 }
 
 export function backend_recipe_to_ui_recipe(recipe: BackendRecipe): Recipe {
@@ -143,28 +99,18 @@ export function backend_recipe_slot_to_entry(
 	meal_plan: Pick<BackendMealPlan, "start_date" | "end_date">,
 	recipe_slot: BackendMealPlanRecipe,
 ): MealPlanEntry {
-	const normalized_start_date = normalize_backend_date(meal_plan.start_date);
-	const normalized_end_date = normalize_backend_date(meal_plan.end_date);
+	const normalized_meal_date = normalize_backend_date(recipe_slot.meal_date);
 
 	return {
 		id: recipe_slot.id,
 		recipe_id: recipe_slot.recipe_id,
-		date: find_first_occurrence_date(
-			normalized_start_date,
-			normalized_end_date,
-			recipe_slot.day_of_week,
-		),
+		date:
+			normalized_meal_date ??
+			normalize_backend_date(meal_plan.start_date) ??
+			normalize_backend_date(meal_plan.end_date) ??
+			parse_iso_date(new Date().toISOString()).toISOString().slice(0, 10),
 		meal_type: recipe_slot.meal_time as MealType,
 		servings: recipe_slot.servings,
-		recurrence_rule:
-			normalized_start_date && normalized_end_date
-				? {
-						frequency: "week",
-						interval: 1,
-						ends_on: normalized_end_date,
-					}
-				: undefined,
-		series_id: recipe_slot.id,
 	};
 }
 
@@ -191,15 +137,13 @@ export function backend_meal_plan_to_ui_plan(
 
 export function ui_entry_to_backend_recipe_slot(entry: MealPlanEntry): {
 	recipe_id: string;
-	day_of_week: BackendMealDayOfWeek;
+	meal_date: string;
 	meal_time: BackendMealTime;
 	servings?: number;
 } {
-	const entry_date = parse_iso_date(entry.date);
-
 	return {
 		recipe_id: entry.recipe_id,
-		day_of_week: day_name_by_index[entry_date.getDay()] ?? "monday",
+		meal_date: entry.date,
 		meal_time: entry.meal_type,
 		servings: entry.servings,
 	};

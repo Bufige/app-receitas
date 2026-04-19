@@ -93,7 +93,7 @@ export type BackendProfile = BackendBaseEntity & {
 export type BackendMealPlanRecipe = BackendBaseEntity & {
 	meal_plan_id: string;
 	recipe_id: string;
-	day_of_week: BackendMealDayOfWeek;
+	meal_date: string;
 	meal_time: BackendMealTime;
 	servings: number;
 	recipe?: BackendRecipe;
@@ -143,7 +143,7 @@ export type CreateMealPlanPayload = {
 	profile_id?: string;
 	recipes?: Array<{
 		recipe_id: string;
-		day_of_week: BackendMealDayOfWeek;
+		meal_date: string;
 		meal_time: BackendMealTime;
 		servings?: number;
 	}>;
@@ -157,7 +157,7 @@ export type UpdateMealPlanPayload = {
 	profile_id?: string;
 	recipes?: Array<{
 		recipe_id: string;
-		day_of_week: BackendMealDayOfWeek;
+		meal_date: string;
 		meal_time: BackendMealTime;
 		servings?: number;
 	}>;
