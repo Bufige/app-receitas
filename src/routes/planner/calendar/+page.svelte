@@ -702,6 +702,18 @@
 		{/if}
 	</div>
 
+	<div class="mobile-shopping-cta">
+		<Button
+			variant="primary"
+			size="large"
+			round
+			href={localizeHref("/shopping-list")}
+		>
+			<Icon icon={cartOutline} width="18" height="18" aria-hidden="true" />
+			{m.nav_shopping_list()}
+		</Button>
+	</div>
+
 	<Modal
 		open={Boolean(selected_day)}
 		title={selected_day
@@ -823,6 +835,11 @@
 		display: grid;
 		gap: 1rem;
 		min-width: 0;
+		padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+
+		@include md {
+			padding-bottom: 0;
+		}
 	}
 
 	.calendar-feedback {
@@ -859,10 +876,10 @@
 	}
 
 	.hero-actions {
-		display: grid;
-		width: 100%;
+		display: none;
 
 		@include md {
+			display: grid;
 			width: auto;
 		}
 	}
@@ -919,6 +936,31 @@
 
 	.empty-panel {
 		justify-items: start;
+	}
+
+	.mobile-shopping-cta {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 20;
+		padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--surface) 20%, transparent),
+			color-mix(in srgb, var(--surface) 96%, transparent) 32%,
+			var(--surface)
+		);
+		backdrop-filter: blur(14px);
+
+		:global(.btn) {
+			width: 100%;
+			min-height: 3.75rem;
+		}
+
+		@include md {
+			display: none;
+		}
 	}
 
 	.overview-scroll {
