@@ -18,7 +18,12 @@
 		build_recipe_pool,
 		collect_plan_dates,
 	} from "$lib/utils/recipe-generation";
-	import type { ExpandedMealPlanEntry, MealType } from "$lib/types/planning";
+	import type {
+		ExpandedMealPlanEntry,
+		MealPlanEntry,
+		MealType,
+		PlanningPreset,
+	} from "$lib/types/planning";
 	import {
 		expand_meal_plan_entries,
 		format_iso_date,
@@ -413,27 +418,18 @@
 		start_date: string;
 		end_date: string;
 		period: "week" | "month";
-		preset?: "this_month" | "this_week";
+		planning_preset: PlanningPreset;
 		feedback_message: string;
 	}) {
 		clear_calendar_feedback();
-
-		meal_plan_store.setPeriod(range.period);
-
-		if (range.preset) {
-			meal_plan_store.setPlanningPreset(range.preset);
-		} else {
-			meal_plan_store.setCustomRange(range.start_date, range.end_date);
-		}
-		meal_plan_store.clearPlan();
 
 		const recipe_pool = build_recipe_pool(
 			meal_plan_store.recipes,
 			get_browser_timezone(),
 		);
 		const plan_dates = collect_plan_dates(
-			meal_plan_store.mealPlan.start_date,
-			meal_plan_store.mealPlan.end_date,
+			range.start_date,
+			range.end_date,
 			Number.MAX_SAFE_INTEGER,
 		);
 
@@ -443,6 +439,7 @@
 		}
 
 		let recipe_index = 0;
+		const generated_entries: MealPlanEntry[] = [];
 
 		for (const plan_date of plan_dates) {
 			for (const meal_type of generated_meal_types) {
@@ -452,7 +449,8 @@
 					continue;
 				}
 
-				meal_plan_store.addEntry({
+				generated_entries.push({
+					id: crypto.randomUUID(),
 					recipe_id: recipe.id,
 					date: plan_date,
 					meal_type,
@@ -461,6 +459,14 @@
 				recipe_index += 1;
 			}
 		}
+
+		meal_plan_store.replacePlan({
+			period: range.period,
+			planning_preset: range.planning_preset,
+			start_date: range.start_date,
+			end_date: range.end_date,
+			entries: generated_entries,
+		});
 
 		show_calendar_feedback(range.feedback_message);
 	}
@@ -476,7 +482,7 @@
 			replace_current_plan_with_generated_meals({
 				...get_preset_range("this_week"),
 				period: "week",
-				preset: "this_week",
+				planning_preset: "this_week",
 				feedback_message: m.planner_calendar_generate_week_feedback(),
 			});
 		} finally {
@@ -495,7 +501,7 @@
 			replace_current_plan_with_generated_meals({
 				...get_preset_range("this_month"),
 				period: "month",
-				preset: "this_month",
+				planning_preset: "this_month",
 				feedback_message: m.planner_calendar_generate_month_feedback(),
 			});
 		} finally {
@@ -514,6 +520,7 @@
 			replace_current_plan_with_generated_meals({
 				...get_next_two_weeks_range(),
 				period: "week",
+				planning_preset: "custom_range",
 				feedback_message: m.planner_calendar_generate_two_weeks_feedback(),
 			});
 		} finally {

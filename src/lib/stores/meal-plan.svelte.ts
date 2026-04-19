@@ -410,6 +410,15 @@ function update_plan(updates: Partial<MealPlan>) {
 	update_local_plan(current_plan.id, (plan) => ({ ...plan, ...updates }));
 }
 
+function clear_plan_statuses(plan_id: string) {
+	shopping_item_statuses = Object.fromEntries(
+		Object.entries(shopping_item_statuses).filter(
+			([key]) => !key.startsWith(`${plan_id}:`),
+		),
+	) as Record<string, ShoppingItemStatus>;
+	save_statuses(shopping_item_statuses);
+}
+
 function merge_recipe_catalog(recipes: Recipe[]) {
 	const existing_recipes_by_id = new Map(
 		recipe_catalog.map((recipe) => [recipe.id, recipe]),
@@ -462,6 +471,31 @@ export function useMealPlanStore() {
 
 			update_local_plan(current_plan.id, (plan) => ({
 				...plan,
+				entries: valid_entries,
+			}));
+		},
+		replacePlan(options: {
+			period: MealPlan["period"];
+			planning_preset: PlanningPreset;
+			start_date: string;
+			end_date: string;
+			entries: MealPlanEntry[];
+		}) {
+			const current_plan = get_active_plan(meal_plans, active_plan_id);
+			const next_plan: MealPlan = {
+				...current_plan,
+				period: options.period,
+				planning_preset: options.planning_preset,
+				start_date: options.start_date,
+				end_date: options.end_date,
+			};
+			const valid_entries = options.entries.filter((entry) =>
+				validate_meal_plan_entry_window(entry, next_plan).ok,
+			);
+
+			clear_plan_statuses(current_plan.id);
+			update_local_plan(current_plan.id, () => ({
+				...next_plan,
 				entries: valid_entries,
 			}));
 		},
@@ -644,12 +678,7 @@ export function useMealPlanStore() {
 				...plan,
 				entries: [],
 			}));
-			shopping_item_statuses = Object.fromEntries(
-				Object.entries(shopping_item_statuses).filter(
-					([key]) => !key.startsWith(`${current_plan.id}:`),
-				),
-			) as Record<string, ShoppingItemStatus>;
-			save_statuses(shopping_item_statuses);
+			clear_plan_statuses(current_plan.id);
 		},
 		deleteCurrentPlan() {
 			const current_plan = get_active_plan(meal_plans, active_plan_id);
