@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from "svelte";
 	import type { Snippet } from "svelte";
 
 	interface ModalProps {
@@ -22,11 +23,24 @@
 		children,
 		actions,
 	}: ModalProps = $props();
+
+	let modal_element = $state<HTMLDivElement | undefined>(undefined);
+
+	$effect(() => {
+		if (!open) {
+			return;
+		}
+
+		void tick().then(() => {
+			modal_element?.focus();
+		});
+	});
 </script>
 
 {#if open}
 	<div class="backdrop">
 		<div
+			bind:this={modal_element}
 			class={`card ${className}`}
 			role="dialog"
 			tabindex="-1"
@@ -61,15 +75,19 @@
 		display: grid;
 		place-items: center;
 		padding: 1rem;
+		overflow-y: auto;
 		background-color: color-mix(in srgb, var(--black) 58%, transparent);
-		z-index: 20;
+		z-index: 1200;
 	}
 
 	.card {
 		width: min(100%, 38rem);
 		display: grid;
+		grid-template-rows: auto auto minmax(0, 1fr) auto;
 		gap: 1rem;
 		padding: 1.25rem;
+		max-height: calc(100dvh - 2rem);
+		overflow: hidden;
 		border-radius: 20px;
 		border: 1px solid var(--border);
 		background-color: var(--surface);
@@ -88,6 +106,9 @@
 	.content {
 		display: grid;
 		gap: 1rem;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
 	}
 
 	.actions {

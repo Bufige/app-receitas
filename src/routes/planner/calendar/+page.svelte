@@ -1,5 +1,6 @@
 <script lang="ts">
 	import cartOutline from "@iconify-icons/mdi/cart-outline";
+	import deleteOutline from "@iconify-icons/mdi/delete-outline";
 	import magnify from "@iconify-icons/mdi/magnify";
 	import Icon from "@iconify/svelte";
 	import { browser } from "$app/environment";
@@ -265,6 +266,7 @@
 
 	function build_day_meal_draft(
 		date: string,
+		meal_type: MealType = "dinner",
 		entry?: ExpandedMealPlanEntry,
 	): DayMealDraft {
 		next_day_draft_count += 1;
@@ -274,9 +276,36 @@
 			entry_id: entry?.source_entry_id ?? null,
 			date,
 			recipe_id: entry?.recipe_id ?? meal_plan_store.recipes[0]?.id ?? "",
-			meal_type: entry?.meal_type ?? "dinner",
+			meal_type: entry?.meal_type ?? meal_type,
 			search_query: "",
 		};
+	}
+
+	function get_used_day_meal_types(excluding_local_id?: string): MealType[] {
+		return day_meal_drafts.reduce<MealType[]>((used_meal_types, draft) => {
+			if (draft.local_id === excluding_local_id) {
+				return used_meal_types;
+			}
+
+			if (used_meal_types.includes(draft.meal_type)) {
+				return used_meal_types;
+			}
+
+			return [...used_meal_types, draft.meal_type];
+		}, []);
+	}
+
+	function get_available_day_meal_types(local_id?: string): MealType[] {
+		const current_draft = local_id
+			? day_meal_drafts.find((draft) => draft.local_id === local_id)
+			: undefined;
+		const used_meal_types = new Set(get_used_day_meal_types(local_id));
+
+		return meal_types.filter(
+			(meal_type) =>
+				meal_type === current_draft?.meal_type ||
+				!used_meal_types.has(meal_type),
+		);
 	}
 
 	function build_day_label(day: OverviewDay) {
@@ -289,12 +318,14 @@
 
 		const drafts = meal_types.flatMap((meal_type) =>
 			day.slots[meal_type].map((entry) =>
-				build_day_meal_draft(day.date, entry),
+				build_day_meal_draft(day.date, meal_type, entry),
 			),
 		);
 
 		day_meal_drafts =
-			drafts.length > 0 ? drafts : [build_day_meal_draft(day.date)];
+			drafts.length > 0
+				? drafts
+				: [build_day_meal_draft(day.date, meal_types[0] ?? "dinner")];
 	}
 
 	function close_day_modal() {
@@ -327,8 +358,24 @@
 	}
 
 	function update_day_draft(local_id: string, updates: Partial<DayMealDraft>) {
+		const available_meal_types = updates.meal_type
+			? get_available_day_meal_types(local_id)
+			: [];
+
 		day_meal_drafts = day_meal_drafts.map((draft) =>
-			draft.local_id === local_id ? { ...draft, ...updates } : draft,
+			draft.local_id === local_id
+				? {
+						...draft,
+						...updates,
+						meal_type:
+							updates.meal_type &&
+							available_meal_types.includes(updates.meal_type)
+								? updates.meal_type
+								: updates.meal_type
+									? draft.meal_type
+									: draft.meal_type,
+					}
+				: draft,
 		);
 	}
 
@@ -337,10 +384,23 @@
 			return;
 		}
 
+		const next_available_meal_type = get_available_day_meal_types()[0];
+
+		if (!next_available_meal_type) {
+			return;
+		}
+
 		day_meal_drafts = [
 			...day_meal_drafts,
-			build_day_meal_draft(selected_day.date),
+			build_day_meal_draft(selected_day.date, next_available_meal_type),
 		];
+	}
+
+	function remove_day_meal_draft(local_id: string) {
+		day_meal_drafts = day_meal_drafts.filter(
+			(draft) => draft.local_id !== local_id,
+		);
+		day_modal_feedback = null;
 	}
 
 	function get_filtered_recipes(
@@ -376,6 +436,37 @@
 			return;
 		}
 
+		const current_day = selected_day;
+
+		const original_entry_ids = meal_types.flatMap((meal_type) =>
+			current_day.slots[meal_type].map((entry) => entry.source_entry_id),
+		);
+		const remaining_entry_ids = new Set(
+			day_meal_drafts
+				.map((draft) => draft.entry_id)
+				.filter((entry_id): entry_id is string => Boolean(entry_id)),
+		);
+
+		const used_meal_types = new Set<MealType>();
+
+		for (const draft of day_meal_drafts) {
+			if (used_meal_types.has(draft.meal_type)) {
+				day_modal_feedback = m.planner_conflict_item({
+					date: build_day_label(current_day),
+					meal_type: get_meal_type_label(draft.meal_type),
+				});
+				return;
+			}
+
+			used_meal_types.add(draft.meal_type);
+		}
+
+		for (const entry_id of original_entry_ids) {
+			if (!remaining_entry_ids.has(entry_id)) {
+				meal_plan_store.removeEntry(entry_id);
+			}
+		}
+
 		for (const draft of day_meal_drafts) {
 			if (!draft.recipe_id) {
 				continue;
@@ -399,7 +490,7 @@
 			}
 		}
 
-		const day_label = build_day_label(selected_day);
+		const day_label = build_day_label(current_day);
 		close_day_modal();
 		show_calendar_feedback(m.planner_calendar_day_saved({ date: day_label }));
 	}
@@ -740,6 +831,7 @@
 					variant="outline"
 					size="small"
 					round
+					disabled={get_available_day_meal_types().length === 0}
 					onclick={add_day_meal_draft}
 				>
 					{m.planner_add_entry()}
@@ -749,6 +841,26 @@
 			<div class="day-edit-list">
 				{#each day_meal_drafts as draft (draft.local_id)}
 					<section class="day-edit-card">
+						<div class="day-edit-card-header">
+							<p class="day-edit-card-title">
+								{get_meal_type_label(draft.meal_type)}
+							</p>
+							<button
+								type="button"
+								class="draft-remove"
+								onclick={() => remove_day_meal_draft(draft.local_id)}
+								title={m.planner_delete_plan()}
+							>
+								<Icon
+									icon={deleteOutline}
+									width="18"
+									height="18"
+									aria-hidden="true"
+								/>
+								<span class="sr-only">{m.planner_delete_plan()}</span>
+							</button>
+						</div>
+
 						<Input
 							id={`recipe-search-${draft.local_id}`}
 							label={m.recipes_search_label()}
@@ -798,12 +910,11 @@
 												.value as MealType,
 										})}
 								>
-									<option value="breakfast"
-										>{m.planner_meal_type_breakfast()}</option
-									>
-									<option value="lunch">{m.planner_meal_type_lunch()}</option>
-									<option value="dinner">{m.planner_meal_type_dinner()}</option>
-									<option value="snack">{m.planner_meal_type_snack()}</option>
+									{#each get_available_day_meal_types(draft.local_id) as available_meal_type}
+										<option value={available_meal_type}>
+											{get_meal_type_label(available_meal_type)}
+										</option>
+									{/each}
 								</select>
 							</div>
 						</div>
@@ -1169,6 +1280,11 @@
 
 	:global(.day-modal) {
 		width: min(100%, 52rem);
+		max-height: calc(100dvh - 1rem);
+
+		@include md {
+			max-height: calc(100dvh - 2rem);
+		}
 	}
 
 	.day-modal-header {
@@ -1203,6 +1319,58 @@
 		border-radius: 18px;
 		border: 1px solid var(--border);
 		background: color-mix(in srgb, var(--surface) 96%, transparent);
+	}
+
+	.day-edit-card-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.day-edit-card-title {
+		font-size: 0.95rem;
+		font-weight: 700;
+		color: var(--text);
+	}
+
+	.draft-remove {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		padding: 0;
+		border: 1px solid color-mix(in srgb, var(--error) 20%, var(--border));
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--surface) 94%, transparent);
+		color: var(--error);
+		cursor: pointer;
+
+		&:focus-visible {
+			outline: 2px solid color-mix(in srgb, var(--error) 26%, transparent);
+			outline-offset: 2px;
+		}
+	}
+
+	:global(.day-modal .actions) {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.75rem;
+
+		@include md {
+			display: flex;
+		}
+	}
+
+	:global(.day-modal .actions .btn) {
+		width: 100%;
+		min-width: 0;
+
+		@include md {
+			width: auto;
+			min-width: 10rem;
+		}
 	}
 
 	.day-edit-grid {
