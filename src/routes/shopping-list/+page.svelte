@@ -20,6 +20,8 @@
 
 	const meal_plan_store = useMealPlanStore();
 	const DESKTOP_BREAKPOINT = 1024;
+	const MOBILE_INTERACTION_MAX_WIDTH = 767;
+	const DOUBLE_TAP_WINDOW_MS = 320;
 	const active_plan = $derived(meal_plan_store.mealPlan);
 	const shopping_view = $derived.by(() =>
 		build_shopping_view(meal_plan_store.shoppingList),
@@ -29,6 +31,10 @@
 	let overview_panel_element = $state<HTMLElement | null>(null);
 	let desktop_layout_height = $state<number | null>(null);
 	let show_mobile_summary = $state(false);
+	let last_mobile_item_tap = $state<{
+		ingredient_id: string;
+		time: number;
+	} | null>(null);
 
 	function build_shopping_view(items: ShoppingListItem[]) {
 		const groups = group_shopping_list_by_category(items);
@@ -73,11 +79,53 @@
 			progress_value,
 		};
 	}
+	function set_status(ingredient_id: string, next_status: ShoppingItemStatus) {
+		meal_plan_store.setShoppingItemStatus(ingredient_id, next_status);
+	}
+
 	function update_status(ingredient_id: string, event: Event) {
 		const next_status = (event.currentTarget as HTMLSelectElement)
 			.value as ShoppingItemStatus;
 
-		meal_plan_store.setShoppingItemStatus(ingredient_id, next_status);
+		set_status(ingredient_id, next_status);
+	}
+
+	function is_mobile_interaction_enabled() {
+		return browser && window.innerWidth <= MOBILE_INTERACTION_MAX_WIDTH;
+	}
+
+	function should_ignore_mobile_item_toggle(event: MouseEvent) {
+		return event.target instanceof Element
+			? Boolean(event.target.closest("select, option, label, a, button, input"))
+			: false;
+	}
+
+	function handle_mobile_item_click(item: ShoppingListItem, event: MouseEvent) {
+		if (
+			!is_mobile_interaction_enabled() ||
+			should_ignore_mobile_item_toggle(event)
+		) {
+			return;
+		}
+
+		const now = Date.now();
+		const is_double_tap =
+			last_mobile_item_tap?.ingredient_id === item.ingredient_id &&
+			now - last_mobile_item_tap.time <= DOUBLE_TAP_WINDOW_MS;
+
+		if (!is_double_tap) {
+			last_mobile_item_tap = {
+				ingredient_id: item.ingredient_id,
+				time: now,
+			};
+			return;
+		}
+
+		last_mobile_item_tap = null;
+		set_status(
+			item.ingredient_id,
+			item.status === "bought" ? "pending" : "bought",
+		);
 	}
 
 	function get_status_label(status: ShoppingItemStatus | undefined): string {
@@ -188,6 +236,22 @@
 			window.cancelAnimationFrame(frame_id);
 			window.removeEventListener("resize", update_layout_height);
 			desktop_layout_height = null;
+		};
+	});
+
+	$effect(() => {
+		if (!browser) {
+			return;
+		}
+
+		const reset_last_mobile_tap = () => {
+			last_mobile_item_tap = null;
+		};
+
+		window.addEventListener("resize", reset_last_mobile_tap);
+
+		return () => {
+			window.removeEventListener("resize", reset_last_mobile_tap);
 		};
 	});
 </script>
@@ -370,7 +434,11 @@
 							<div class="items">
 								{#each group.items as item}
 									<article class="item-card">
-										<div class="item-copy">
+										<button
+											type="button"
+											class="item-copy"
+											onclick={(event) => handle_mobile_item_click(item, event)}
+										>
 											<div class="item-topline">
 												<h3>{item.name}</h3>
 												<span
@@ -380,7 +448,7 @@
 												</span>
 											</div>
 											<p class="quantity">{item.total_quantity} {item.unit}</p>
-										</div>
+										</button>
 										<div class="field-group compact">
 											<label for={`status-${item.ingredient_id}`}
 												>{m.shopping_status_label()}</label
@@ -839,6 +907,24 @@
 	.item-copy {
 		display: grid;
 		gap: 0.35rem;
+		width: 100%;
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+
+		&:focus-visible {
+			outline: 2px solid color-mix(in srgb, var(--primary) 32%, transparent);
+			outline-offset: 4px;
+			border-radius: 12px;
+		}
+
+		@include md {
+			cursor: default;
+		}
 	}
 
 	.item-topline {
