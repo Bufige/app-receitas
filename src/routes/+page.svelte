@@ -10,6 +10,7 @@
 	import { backend_recipe_to_ui_recipe } from "$lib/utils/backend-adapters";
 	import type { MealType } from "$lib/types/planning";
 	import { collect_plan_dates } from "$lib/utils/recipe-generation";
+	import { get_preset_range } from "$lib/utils/planning";
 
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
@@ -28,7 +29,6 @@
 
 		try {
 			await meal_plan_store.ensureReady();
-			meal_plan_store.setPlanningPreset("this_week");
 			const default_home_household =
 				household_store.profiles.find((profile) => profile.kind === "home") ??
 				household_store.profile;
@@ -46,10 +46,11 @@
 			const random_recipes = random_recipes_response.data.map((recipe) =>
 				backend_recipe_to_ui_recipe(recipe),
 			);
+			const week_range = get_preset_range("this_week");
 
 			const plan_dates = collect_plan_dates(
-				meal_plan_store.mealPlan.start_date,
-				meal_plan_store.mealPlan.end_date,
+				week_range.start_date,
+				week_range.end_date,
 				weekly_day_count,
 			);
 
@@ -82,7 +83,13 @@
 				}
 			}
 
-			meal_plan_store.replaceEntries(generated_entries);
+			meal_plan_store.replacePlan({
+				period: "week",
+				planning_preset: "this_week",
+				start_date: week_range.start_date,
+				end_date: week_range.end_date,
+				entries: generated_entries,
+			});
 
 			await goto(localizeHref("/planner/calendar"));
 		} finally {
