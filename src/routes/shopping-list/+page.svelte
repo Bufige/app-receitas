@@ -347,7 +347,10 @@
 				</p>
 			</aside>
 
-			<div class="group-list-scroll">
+			<div
+				class:mobile-summary-visible={show_mobile_summary}
+				class="group-list-scroll"
+			>
 				<section class="group-list">
 					{#each shopping_view.groups as group}
 						<section class="group-panel surface-panel">
@@ -728,6 +731,21 @@
 
 	.group-list-scroll {
 		min-width: 0;
+		padding-top: 0;
+		transition: padding-top var(--motion-base, 180ms)
+			var(--ease-emphasized, ease);
+
+		&.mobile-summary-visible {
+			padding-top: calc(8.5rem + env(safe-area-inset-top, 0px));
+		}
+
+		@include md {
+			padding-top: 0;
+
+			&.mobile-summary-visible {
+				padding-top: 0;
+			}
+		}
 
 		@include lg {
 			align-self: stretch;
