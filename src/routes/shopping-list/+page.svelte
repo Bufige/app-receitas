@@ -1,10 +1,9 @@
 <script lang="ts">
+	import { browser } from "$app/environment";
 	import Icon from "@iconify/svelte";
 	import cartOutline from "@iconify-icons/mdi/cart-outline";
 	import checkCircleOutline from "@iconify-icons/mdi/check-circle-outline";
 	import clockOutline from "@iconify-icons/mdi/clock-outline";
-	import backupRestore from "@iconify-icons/mdi/backup-restore";
-	import cursorMove from "@iconify-icons/mdi/cursor-move";
 	import layersTripleOutline from "@iconify-icons/mdi/layers-triple-outline";
 	import Button from "$lib/components/ui/Button/index.svelte";
 	import PageHero from "$lib/components/ui/PageHero/index.svelte";
@@ -25,15 +24,8 @@
 		build_shopping_view(meal_plan_store.shoppingList),
 	);
 	const range_label = $derived.by(() => format_plan_range_label(active_plan));
-	let floating_progress_element = $state<HTMLDivElement | null>(null);
-	let floating_progress_position = $state<{ x: number; y: number } | null>(
-		null,
-	);
-	let floating_progress_drag = $state<{
-		pointer_id: number;
-		offset_x: number;
-		offset_y: number;
-	} | null>(null);
+	let overview_panel_element = $state<HTMLElement | null>(null);
+	let show_mobile_summary = $state(false);
 
 	function build_shopping_view(items: ShoppingListItem[]) {
 		const groups = group_shopping_list_by_category(items);
@@ -78,17 +70,6 @@
 			progress_value,
 		};
 	}
-	const is_floating_progress_dragging = $derived(
-		floating_progress_drag !== null,
-	);
-	const floating_progress_style = $derived.by(() => {
-		if (!floating_progress_position) {
-			return undefined;
-		}
-
-		return `left: ${floating_progress_position.x}px; top: ${floating_progress_position.y}px; bottom: auto; right: auto;`;
-	});
-
 	function update_status(ingredient_id: string, event: Event) {
 		const next_status = (event.currentTarget as HTMLSelectElement)
 			.value as ShoppingItemStatus;
@@ -130,102 +111,45 @@
 		return group.items.filter((item) => item.status === "pending").length;
 	}
 
-	function get_widget_dimensions() {
-		const width = floating_progress_element?.offsetWidth ?? 208;
-		const height = floating_progress_element?.offsetHeight ?? 96;
-
-		return { width, height };
-	}
-
-	function clamp_floating_position(x: number, y: number) {
-		if (typeof window === "undefined") {
-			return { x, y };
-		}
-
-		const { width, height } = get_widget_dimensions();
-		const margin = 12;
-		const max_x = Math.max(margin, window.innerWidth - width - margin);
-		const max_y = Math.max(margin, window.innerHeight - height - margin);
-
-		return {
-			x: Math.min(Math.max(x, margin), max_x),
-			y: Math.min(Math.max(y, margin), max_y),
-		};
-	}
-
-	function start_floating_progress_drag(event: PointerEvent) {
-		if (!(event.currentTarget instanceof HTMLElement)) {
-			return;
-		}
-
-		event.preventDefault();
-
-		const rect = floating_progress_element?.getBoundingClientRect();
-		const fallback_y =
-			typeof window === "undefined" ? 16 : window.innerHeight - 96 - 80;
-		const origin = floating_progress_position ?? {
-			x: rect?.left ?? 16,
-			y: rect?.top ?? fallback_y,
-		};
-
-		floating_progress_position = origin;
-		floating_progress_drag = {
-			pointer_id: event.pointerId,
-			offset_x: event.clientX - origin.x,
-			offset_y: event.clientY - origin.y,
-		};
-
-		event.currentTarget.setPointerCapture(event.pointerId);
-	}
-
-	function move_floating_progress(event: PointerEvent) {
+	function update_mobile_summary_visibility() {
 		if (
-			!floating_progress_drag ||
-			event.pointerId !== floating_progress_drag.pointer_id
+			!browser ||
+			!overview_panel_element ||
+			shopping_view.items.length === 0
 		) {
+			show_mobile_summary = false;
 			return;
 		}
 
-		floating_progress_position = clamp_floating_position(
-			event.clientX - floating_progress_drag.offset_x,
-			event.clientY - floating_progress_drag.offset_y,
-		);
+		const header_offset = window.innerWidth >= 768 ? 64 : 56;
+		const overview_bounds = overview_panel_element.getBoundingClientRect();
+
+		show_mobile_summary = overview_bounds.bottom <= header_offset + 12;
 	}
 
-	function stop_floating_progress_drag(event?: PointerEvent) {
+	$effect(() => {
 		if (
-			event &&
-			floating_progress_drag &&
-			event.pointerId !== floating_progress_drag.pointer_id
+			!browser ||
+			!overview_panel_element ||
+			shopping_view.items.length === 0
 		) {
+			show_mobile_summary = false;
 			return;
 		}
 
-		floating_progress_drag = null;
-	}
+		const frame_id = window.requestAnimationFrame(() => {
+			update_mobile_summary_visibility();
+		});
 
-	function restore_floating_progress_position() {
-		floating_progress_position = null;
-		floating_progress_drag = null;
-	}
-
-	function handle_viewport_resize() {
-		if (!floating_progress_position) {
-			return;
-		}
-
-		floating_progress_position = clamp_floating_position(
-			floating_progress_position.x,
-			floating_progress_position.y,
-		);
-	}
+		return () => {
+			window.cancelAnimationFrame(frame_id);
+		};
+	});
 </script>
 
 <svelte:window
-	onpointermove={move_floating_progress}
-	onpointerup={stop_floating_progress_drag}
-	onpointercancel={stop_floating_progress_drag}
-	onresize={handle_viewport_resize}
+	onscroll={update_mobile_summary_visibility}
+	onresize={update_mobile_summary_visibility}
 />
 
 <SEO
@@ -280,8 +204,32 @@
 			</div>
 		</section>
 	{:else}
+		<div class:visible={show_mobile_summary} class="mobile-shopping-summary">
+			<div class="mobile-shopping-summary__copy">
+				<p>{m.home_feature_shopping_title()}</p>
+				<strong title={active_plan.name}>{active_plan.name}</strong>
+				<span title={range_label}>{range_label}</span>
+			</div>
+			<div class="mobile-shopping-summary__stats">
+				<strong>{shopping_view.progress_value}%</strong>
+				<span>
+					{shopping_view.pending_count}
+					{m.shopping_status_pending().toLowerCase()}
+				</span>
+			</div>
+			<div class="mobile-shopping-summary__track" aria-hidden="true">
+				<span
+					class="mobile-shopping-summary__bar"
+					style={`width: ${shopping_view.progress_value}%`}
+				></span>
+			</div>
+		</div>
+
 		<div class="shopping-layout">
-			<aside class="overview-panel surface-panel">
+			<aside
+				bind:this={overview_panel_element}
+				class="overview-panel surface-panel"
+			>
 				<div class="overview-copy">
 					<p class="eyebrow">{m.home_feature_shopping_eyebrow()}</p>
 					<h2>{m.home_feature_shopping_title()}</h2>
@@ -410,56 +358,6 @@
 			</section>
 		</div>
 	{/if}
-
-	{#if shopping_view.items.length > 0}
-		<div
-			bind:this={floating_progress_element}
-			class="floating-progress"
-			class:floating-progress--docked={floating_progress_position === null}
-			class:floating-progress--dragging={is_floating_progress_dragging}
-			class:floating-progress--floating={floating_progress_position !== null}
-			style={floating_progress_style}
-			aria-live="polite"
-		>
-			<div class="floating-progress__topline">
-				<div class="floating-progress__copy">
-					<span>{m.home_feature_shopping_title()}</span>
-					<strong>{shopping_view.progress_value}%</strong>
-				</div>
-				<div class="floating-progress__actions">
-					<button
-						type="button"
-						class="floating-progress__action"
-						aria-label={m.a11y_shopping_widget_drag()}
-						onpointerdown={start_floating_progress_drag}
-					>
-						<Icon icon={cursorMove} width="14" height="14" aria-hidden="true" />
-					</button>
-					{#if floating_progress_position !== null}
-						<button
-							type="button"
-							class="floating-progress__action"
-							aria-label={m.a11y_shopping_widget_restore()}
-							onclick={restore_floating_progress_position}
-						>
-							<Icon
-								icon={backupRestore}
-								width="14"
-								height="14"
-								aria-hidden="true"
-							/>
-						</button>
-					{/if}
-				</div>
-			</div>
-			<div class="floating-progress__track" aria-hidden="true">
-				<span
-					class="floating-progress__bar"
-					style={`width: ${shopping_view.progress_value}%`}
-				></span>
-			</div>
-		</div>
-	{/if}
 </section>
 
 <style lang="scss">
@@ -468,7 +366,7 @@
 	.page {
 		display: grid;
 		gap: 1rem;
-		padding-bottom: 7rem;
+		padding-bottom: 1.5rem;
 	}
 
 	.hero-actions {
@@ -517,6 +415,107 @@
 			grid-template-columns: minmax(20rem, 0.8fr) minmax(0, 1.2fr);
 			align-items: start;
 		}
+	}
+
+	.mobile-shopping-summary {
+		position: fixed;
+		top: calc(56px + env(safe-area-inset-top, 0px));
+		left: 0;
+		right: 0;
+		z-index: 90;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.6rem 1rem;
+		padding: 0.85rem 1rem;
+		border-bottom: 1px solid
+			color-mix(in srgb, var(--primary) 14%, var(--border));
+		background: color-mix(in srgb, var(--surface) 94%, transparent);
+		backdrop-filter: blur(18px);
+		transform: translateY(calc(-100% - 0.5rem));
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			transform var(--motion-base, 180ms) var(--ease-emphasized, ease),
+			opacity var(--motion-base, 180ms) var(--ease-emphasized, ease);
+
+		&.visible {
+			transform: translateY(0);
+			opacity: 1;
+			pointer-events: auto;
+		}
+
+		@include md {
+			display: none;
+		}
+	}
+
+	.mobile-shopping-summary__copy {
+		display: grid;
+		gap: 0.1rem;
+		min-width: 0;
+
+		p {
+			font-size: 0.72rem;
+			font-weight: 700;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			color: var(--text-muted);
+		}
+
+		strong,
+		span {
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		strong {
+			font-size: 0.95rem;
+			color: var(--text);
+		}
+
+		span {
+			font-size: 0.82rem;
+			color: var(--text-muted);
+		}
+	}
+
+	.mobile-shopping-summary__stats {
+		display: grid;
+		justify-items: end;
+		align-content: start;
+		gap: 0.15rem;
+
+		strong {
+			font-size: 1.2rem;
+			line-height: 1;
+		}
+
+		span {
+			font-size: 0.76rem;
+			font-weight: 700;
+			color: var(--text-muted);
+		}
+	}
+
+	.mobile-shopping-summary__track {
+		grid-column: 1 / -1;
+		height: 0.45rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--border) 78%, transparent);
+		overflow: hidden;
+	}
+
+	.mobile-shopping-summary__bar {
+		display: block;
+		height: 100%;
+		border-radius: inherit;
+		background: linear-gradient(
+			90deg,
+			var(--primary) 0%,
+			var(--secondary) 100%
+		);
 	}
 
 	.overview-panel {
@@ -819,127 +818,5 @@
 
 	.compact {
 		min-width: min(100%, 14rem);
-	}
-
-	.floating-progress {
-		position: fixed;
-		z-index: 120;
-		display: grid;
-		gap: 0.5rem;
-		width: min(13.5rem, calc(100vw - 2rem));
-		padding: 0.75rem 0.8rem;
-		box-sizing: border-box;
-		border-radius: 20px;
-		border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
-		background: color-mix(in srgb, var(--surface) 94%, transparent);
-		backdrop-filter: blur(18px);
-		box-shadow: var(--shadow-strong);
-		user-select: none;
-		overflow: hidden;
-
-		@include md {
-			width: 12.75rem;
-		}
-	}
-
-	.floating-progress--docked {
-		left: max(1rem, calc(env(safe-area-inset-left) + 1rem));
-		bottom: max(5rem, calc(env(safe-area-inset-bottom) + 5rem));
-	}
-
-	.floating-progress--floating {
-		bottom: auto;
-	}
-
-	.floating-progress--dragging {
-		cursor: grabbing;
-	}
-
-	.floating-progress__topline {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 0.6rem;
-		min-width: 0;
-	}
-
-	.floating-progress__copy {
-		display: grid;
-		gap: 0.15rem;
-		min-width: 0;
-		flex: 1 1 auto;
-
-		span {
-			font-size: 0.72rem;
-			font-weight: 700;
-			color: var(--text-muted);
-			line-height: 1.1;
-			word-break: break-word;
-		}
-
-		strong {
-			font-size: 1rem;
-			line-height: 1;
-		}
-	}
-
-	.floating-progress__actions {
-		display: flex;
-		align-items: center;
-		justify-content: flex-end;
-		gap: 0.35rem;
-		flex-shrink: 0;
-		max-width: 100%;
-	}
-
-	.floating-progress__action {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2rem;
-		height: 2rem;
-		padding: 0;
-		flex: 0 0 auto;
-		box-sizing: border-box;
-		border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
-		border-radius: 999px;
-		background: color-mix(in srgb, var(--surface) 78%, transparent);
-		color: var(--text-muted);
-		cursor: pointer;
-		touch-action: none;
-		transition:
-			transform var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			border-color var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			background-color var(--motion-base, 180ms) var(--ease-emphasized, ease),
-			color var(--motion-base, 180ms) var(--ease-emphasized, ease);
-
-		&:hover,
-		&:focus-visible {
-			transform: translateY(-1px);
-			border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
-			background: color-mix(in srgb, var(--primary) 10%, var(--surface));
-			color: var(--text);
-		}
-	}
-
-	.floating-progress__track {
-		width: 100%;
-		max-width: 100%;
-		height: 0.42rem;
-		border-radius: 999px;
-		background: color-mix(in srgb, var(--border) 78%, transparent);
-		overflow: hidden;
-	}
-
-	.floating-progress__bar {
-		display: block;
-		max-width: 100%;
-		height: 100%;
-		border-radius: inherit;
-		background: linear-gradient(
-			90deg,
-			var(--primary) 0%,
-			var(--secondary) 100%
-		);
 	}
 </style>
