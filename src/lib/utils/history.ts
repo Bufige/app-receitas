@@ -5,7 +5,6 @@ import {
 	format_iso_date,
 	parse_iso_date,
 } from "$lib/utils/planning";
-import { calculate_shopping_list } from "$lib/utils/shopping-list";
 
 function get_recipe_name(recipes: Recipe[], recipe_id: string): string {
 	return recipes.find((recipe) => recipe.id === recipe_id)?.name ?? recipe_id;
@@ -174,16 +173,6 @@ export function build_plan_history_summaries(
 		const expanded_entries = effective_range
 			? get_history_occurrences(plan, range)
 			: [];
-		const filtered_plan: MealPlan = effective_range
-			? {
-					...plan,
-					start_date: effective_range.start_date,
-					end_date: effective_range.end_date,
-				}
-			: plan;
-		const shopping_list = effective_range
-			? calculate_shopping_list(recipes, filtered_plan)
-			: [];
 		const active_entry_ids = new Set(
 			expanded_entries.map((entry) => entry.source_entry_id),
 		);
@@ -198,7 +187,7 @@ export function build_plan_history_summaries(
 			start_date: effective_range?.start_date ?? plan.start_date,
 			end_date: effective_range?.end_date ?? plan.end_date,
 			total_occurrences: expanded_entries.length,
-			shopping_item_count: shopping_list.length,
+			shopping_item_count: 0,
 			recurring_series_count: count_recurring_series(active_entries),
 			top_recipe_names: build_top_recipe_names(recipes, expanded_entries),
 			recent_activity: build_recent_activity(plan, recipes, range),

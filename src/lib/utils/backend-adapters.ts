@@ -155,7 +155,7 @@ export function backend_shopping_list_to_ui_items(
 	return items.map((item) => ({
 		ingredient_id: item.ingredient_id,
 		name: item.ingredient?.name ?? item.ingredient_id,
-		total_quantity: Math.round(item.quantity * 100) / 100,
+		total_quantity: item.quantity,
 		unit: normalize_unit(item.unit),
 		category: item.ingredient?.category ?? "other",
 	}));

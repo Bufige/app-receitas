@@ -24,7 +24,6 @@ import {
 	type PlanWindowValidationResult,
 	validate_meal_plan_entry_window,
 } from "$lib/utils/planning";
-import { calculate_shopping_list } from "$lib/utils/shopping-list";
 
 const ACTIVE_PLAN_STORAGE_KEY = "active_meal_plan_id";
 const STATUS_STORAGE_KEY = "shopping_item_statuses";
@@ -515,11 +514,7 @@ export function useMealPlanStore() {
 			);
 			const remote_items = shopping_lists_by_plan_id[current_plan.id];
 
-			if (remote_items) {
-				return apply_statuses(remote_items, statuses);
-			}
-
-			return calculate_shopping_list(recipe_catalog, current_plan, statuses);
+			return apply_statuses(remote_items ?? [], statuses);
 		},
 		get shoppingItemStatuses() {
 			return get_active_plan_statuses(active_plan_id, shopping_item_statuses);
