@@ -337,10 +337,7 @@
 			),
 		);
 
-		day_meal_drafts =
-			drafts.length > 0
-				? drafts
-				: [build_day_meal_draft(day.date, meal_types[0] ?? "dinner")];
+		day_meal_drafts = drafts;
 	}
 
 	function close_day_modal() {
@@ -1556,6 +1553,8 @@
 		justify-content: space-between;
 		align-items: center;
 		gap: 0.75rem;
+		padding-top: 0.2rem;
+		padding-right: 0.2rem;
 	}
 
 	.day-modal-summary {
