@@ -19,12 +19,15 @@
 	import { localizeHref } from "$lib/paraglide/runtime";
 
 	const meal_plan_store = useMealPlanStore();
+	const DESKTOP_BREAKPOINT = 1024;
 	const active_plan = $derived(meal_plan_store.mealPlan);
 	const shopping_view = $derived.by(() =>
 		build_shopping_view(meal_plan_store.shoppingList),
 	);
 	const range_label = $derived.by(() => format_plan_range_label(active_plan));
+	let shopping_layout_element = $state<HTMLElement | null>(null);
 	let overview_panel_element = $state<HTMLElement | null>(null);
+	let desktop_layout_height = $state<number | null>(null);
 	let show_mobile_summary = $state(false);
 
 	function build_shopping_view(items: ShoppingListItem[]) {
@@ -127,6 +130,26 @@
 		show_mobile_summary = overview_bounds.bottom <= header_offset + 12;
 	}
 
+	function update_desktop_layout_height() {
+		if (
+			!browser ||
+			!shopping_layout_element ||
+			shopping_view.items.length === 0 ||
+			window.innerWidth < DESKTOP_BREAKPOINT
+		) {
+			desktop_layout_height = null;
+			return;
+		}
+
+		const layout_bounds = shopping_layout_element.getBoundingClientRect();
+		const viewport_gap = 16;
+
+		desktop_layout_height = Math.max(
+			window.innerHeight - layout_bounds.top - viewport_gap,
+			320,
+		);
+	}
+
 	$effect(() => {
 		if (
 			!browser ||
@@ -143,6 +166,28 @@
 
 		return () => {
 			window.cancelAnimationFrame(frame_id);
+		};
+	});
+
+	$effect(() => {
+		if (!browser) {
+			return;
+		}
+
+		const update_layout_height = () => {
+			update_desktop_layout_height();
+		};
+
+		const frame_id = window.requestAnimationFrame(() => {
+			update_layout_height();
+		});
+
+		window.addEventListener("resize", update_layout_height);
+
+		return () => {
+			window.cancelAnimationFrame(frame_id);
+			window.removeEventListener("resize", update_layout_height);
+			desktop_layout_height = null;
 		};
 	});
 </script>
@@ -225,7 +270,13 @@
 			</div>
 		</div>
 
-		<div class="shopping-layout">
+		<div
+			bind:this={shopping_layout_element}
+			class="shopping-layout"
+			style={desktop_layout_height
+				? `--desktop-layout-height: ${desktop_layout_height}px`
+				: undefined}
+		>
 			<aside
 				bind:this={overview_panel_element}
 				class="overview-panel surface-panel"
@@ -296,66 +347,68 @@
 				</p>
 			</aside>
 
-			<section class="group-list">
-				{#each shopping_view.groups as group}
-					<section class="group-panel surface-panel">
-						<header class="group-header">
-							<div>
-								<h2>
-									{m.shopping_category_title({ category: group.category })}
-								</h2>
-								<p>
-									{get_group_pending_count(group)}
-									{m.shopping_status_pending().toLowerCase()}
-								</p>
-							</div>
-							<span class="group-count">{group.items.length}</span>
-						</header>
+			<div class="group-list-scroll">
+				<section class="group-list">
+					{#each shopping_view.groups as group}
+						<section class="group-panel surface-panel">
+							<header class="group-header">
+								<div>
+									<h2>
+										{m.shopping_category_title({ category: group.category })}
+									</h2>
+									<p>
+										{get_group_pending_count(group)}
+										{m.shopping_status_pending().toLowerCase()}
+									</p>
+								</div>
+								<span class="group-count">{group.items.length}</span>
+							</header>
 
-						<div class="items">
-							{#each group.items as item}
-								<article class="item-card">
-									<div class="item-copy">
-										<div class="item-topline">
-											<h3>{item.name}</h3>
-											<span
-												class={`status-badge ${get_status_class(item.status)}`}
-											>
-												{get_status_label(item.status)}
-											</span>
+							<div class="items">
+								{#each group.items as item}
+									<article class="item-card">
+										<div class="item-copy">
+											<div class="item-topline">
+												<h3>{item.name}</h3>
+												<span
+													class={`status-badge ${get_status_class(item.status)}`}
+												>
+													{get_status_label(item.status)}
+												</span>
+											</div>
+											<p class="quantity">{item.total_quantity} {item.unit}</p>
 										</div>
-										<p class="quantity">{item.total_quantity} {item.unit}</p>
-									</div>
-									<div class="field-group compact">
-										<label for={`status-${item.ingredient_id}`}
-											>{m.shopping_status_label()}</label
-										>
-										<select
-											id={`status-${item.ingredient_id}`}
-											value={item.status ?? "pending"}
-											onchange={(event) =>
-												update_status(item.ingredient_id, event)}
-										>
-											<option value="pending"
-												>{m.shopping_status_pending()}</option
+										<div class="field-group compact">
+											<label for={`status-${item.ingredient_id}`}
+												>{m.shopping_status_label()}</label
 											>
-											<option value="bought"
-												>{m.shopping_status_bought()}</option
+											<select
+												id={`status-${item.ingredient_id}`}
+												value={item.status ?? "pending"}
+												onchange={(event) =>
+													update_status(item.ingredient_id, event)}
 											>
-											<option value="skipped"
-												>{m.shopping_status_skipped()}</option
-											>
-											<option value="already_available"
-												>{m.shopping_status_already_available()}</option
-											>
-										</select>
-									</div>
-								</article>
-							{/each}
-						</div>
-					</section>
-				{/each}
-			</section>
+												<option value="pending"
+													>{m.shopping_status_pending()}</option
+												>
+												<option value="bought"
+													>{m.shopping_status_bought()}</option
+												>
+												<option value="skipped"
+													>{m.shopping_status_skipped()}</option
+												>
+												<option value="already_available"
+													>{m.shopping_status_already_available()}</option
+												>
+											</select>
+										</div>
+									</article>
+								{/each}
+							</div>
+						</section>
+					{/each}
+				</section>
+			</div>
 		</div>
 	{/if}
 </section>
@@ -367,6 +420,11 @@
 		display: grid;
 		gap: 1rem;
 		padding-bottom: 1.5rem;
+
+		@include lg {
+			align-content: start;
+			padding-bottom: 0;
+		}
 	}
 
 	.hero-actions {
@@ -410,10 +468,15 @@
 	.shopping-layout {
 		display: grid;
 		gap: 1rem;
+		min-height: 0;
 
 		@include lg {
 			grid-template-columns: minmax(20rem, 0.8fr) minmax(0, 1.2fr);
-			align-items: start;
+			align-items: stretch;
+			height: var(--desktop-layout-height, auto);
+			max-height: var(--desktop-layout-height, none);
+			min-height: 0;
+			overflow: hidden;
 		}
 	}
 
@@ -524,8 +587,8 @@
 		height: fit-content;
 
 		@include lg {
+			align-self: start;
 			position: sticky;
-			top: 5.5rem;
 		}
 	}
 
@@ -661,6 +724,21 @@
 
 	.is-available {
 		border-color: color-mix(in srgb, var(--secondary) 40%, var(--border));
+	}
+
+	.group-list-scroll {
+		min-width: 0;
+
+		@include lg {
+			align-self: stretch;
+			height: 100%;
+			min-height: 0;
+			overflow-y: auto;
+			overflow-x: hidden;
+			padding-right: 0.35rem;
+			scrollbar-gutter: stable;
+			overscroll-behavior: contain;
+		}
 	}
 
 	.group-list {
