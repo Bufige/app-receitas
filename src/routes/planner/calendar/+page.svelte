@@ -851,6 +851,7 @@
 	.calendar-header {
 		display: flex;
 		justify-content: flex-start;
+		width: 100%;
 
 		@include lg {
 			justify-content: flex-end;
@@ -887,11 +888,14 @@
 
 	.calendar-actions {
 		display: grid;
+		grid-template-columns: minmax(0, 1fr);
 		gap: 0.75rem;
+		width: 100%;
 
 		@include md {
 			grid-template-columns: repeat(2, minmax(0, auto));
 			justify-content: end;
+			width: auto;
 		}
 
 		@include lg {
@@ -920,18 +924,36 @@
 	.overview-scroll {
 		overflow-x: auto;
 		padding-bottom: 0.2rem;
+		overflow-y: visible;
+		scroll-snap-type: x mandatory;
+		scroll-padding-inline: 0;
+		overscroll-behavior-x: contain;
+
+		@include md {
+			scroll-snap-type: none;
+		}
 	}
 
 	.overview-weekday-row,
 	.overview-grid {
 		display: grid;
-		grid-template-columns: repeat(7, minmax(10rem, 1fr));
-		min-width: 70rem;
+		grid-template-columns: repeat(7, minmax(0, calc(100vw - 3.25rem)));
+		min-width: calc((100vw - 3.25rem) * 7 + 0.65rem * 6);
+
+		@include md {
+			grid-template-columns: repeat(7, minmax(10rem, 1fr));
+			min-width: 70rem;
+		}
 	}
 
 	.overview-weekday-row {
-		gap: 0.65rem;
-		margin-bottom: 0.65rem;
+		display: none;
+
+		@include md {
+			display: grid;
+			gap: 0.65rem;
+			margin-bottom: 0.65rem;
+		}
 	}
 
 	.overview-weekday-cell {
@@ -959,19 +981,31 @@
 	}
 
 	.overview-placeholder {
+		display: none;
 		background-color: color-mix(in srgb, var(--surface) 65%, transparent);
 		border-style: dashed;
 		opacity: 0.45;
+
+		@include md {
+			display: grid;
+		}
 	}
 
 	.overview-day {
 		position: relative;
 		gap: 0.75rem;
 		cursor: pointer;
+		scroll-snap-align: start;
+		scroll-snap-stop: always;
 		transition:
 			transform var(--motion-base, 180ms) var(--ease-emphasized, ease),
 			border-color var(--motion-base, 180ms) var(--ease-emphasized, ease),
 			box-shadow var(--motion-base, 180ms) var(--ease-emphasized, ease);
+
+		@include md {
+			scroll-snap-align: none;
+			scroll-snap-stop: normal;
+		}
 
 		&.has-meals {
 			border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
