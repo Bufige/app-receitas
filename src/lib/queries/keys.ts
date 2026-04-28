@@ -7,6 +7,14 @@ export const queryKeys = {
 		all: ["recipes"] as const,
 		list: (params?: { page?: number; limit?: number; query?: string }) =>
 			[...queryKeys.recipes.all, "list", params ?? {}] as const,
+		infiniteList: (params?: {
+			limit?: number;
+			query?: string;
+			servings_min?: number;
+			servings_max?: number;
+			prep_time_min?: number;
+			prep_time_max?: number;
+		}) => [...queryKeys.recipes.all, "infinite-list", params ?? {}] as const,
 		random: (params: {
 			amount: number;
 			country?: string;

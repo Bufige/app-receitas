@@ -2,17 +2,48 @@
 	import { page } from "$app/state";
 	import magnify from "@iconify-icons/mdi/magnify";
 	import Button from "$lib/components/ui/Button/index.svelte";
+	import RecipeCard from "$lib/components/ui/RecipeCard/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import Input from "$lib/components/ui/Input/index.svelte";
 	import PageHero from "$lib/components/ui/PageHero/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
-	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
+	import { createInfiniteRecipesQuery } from "$lib/queries/recipes";
+	import { backend_recipe_to_ui_recipe } from "$lib/utils/backend-adapters";
+	import { intersect } from "$lib/utils/intersect";
 	import { get_recipe_tag_label } from "$lib/utils/recipe-tags";
 
-	const meal_plan_store = useMealPlanStore();
+	const RECIPES_PAGE_SIZE = 12;
+	const SEARCH_DEBOUNCE_MS = 250;
+
 	let search = $state("");
-	const recipes = $derived(meal_plan_store.recipes);
+	let debounced_search = $state("");
+
+	$effect(() => {
+		const next_search = search.trim();
+		const timeout = setTimeout(() => {
+			debounced_search = next_search;
+		}, SEARCH_DEBOUNCE_MS);
+
+		return () => clearTimeout(timeout);
+	});
+
+	const recipes_query = createInfiniteRecipesQuery(
+		() => ({
+			limit: RECIPES_PAGE_SIZE,
+			query: debounced_search || undefined,
+		}),
+		{
+			staleTime: 60_000,
+		},
+	);
+
+	const recipes = $derived.by(
+		() =>
+			recipes_query.data?.pages.flatMap((recipes_page) =>
+				recipes_page.data.map((recipe) => backend_recipe_to_ui_recipe(recipe)),
+			) ?? [],
+	);
 
 	function normalize_tags(tags: string[]) {
 		return [...new Set(tags)]
@@ -89,6 +120,28 @@
 			return matches_search && matches_tags;
 		});
 	});
+
+	const is_initial_loading = $derived.by(
+		() => recipes_query.isPending && recipes.length === 0,
+	);
+	const has_error = $derived.by(
+		() => Boolean(recipes_query.error) && recipes.length === 0,
+	);
+	const has_more_recipes = $derived.by(() =>
+		Boolean(recipes_query.hasNextPage),
+	);
+
+	function get_tag_label(tag: string) {
+		return get_recipe_tag_label(tag, m);
+	}
+
+	async function load_more_recipes() {
+		if (!recipes_query.hasNextPage || recipes_query.isFetchingNextPage) {
+			return;
+		}
+
+		await recipes_query.fetchNextPage();
+	}
 </script>
 
 <SEO title={m.seo_recipes_title()} description={m.seo_recipes_description()} />
@@ -134,77 +187,78 @@
 		{/if}
 	</div>
 
-	{#if filtered_recipes.length === 0}
+	{#if has_error}
+		<p class="empty error-state">{m.recipes_error()}</p>
+	{:else if is_initial_loading}
+		<div class="loading-state" aria-busy="true">
+			<p class="loading-copy">{m.recipes_loading()}</p>
+			<div class="grid skeleton-grid" aria-hidden="true">
+				{#each Array.from({ length: RECIPES_PAGE_SIZE }) as _, index}
+					<div class="skeleton-card" data-index={index}></div>
+				{/each}
+			</div>
+		</div>
+	{:else if filtered_recipes.length === 0}
 		<p class="empty">{m.recipes_empty()}</p>
 	{:else}
 		<div class="grid">
-			{#each filtered_recipes as recipe}
-				<article class="card">
-					{#if recipe.image_url}
-						<img
-							class="image"
-							src={recipe.image_url}
-							alt={recipe.name}
-							loading="lazy"
-						/>
-					{/if}
-
-					<div class="card-body">
-						<div class="card-top">
-							<h2>{recipe.name}</h2>
-							{#if recipe.description}
-								<p>{recipe.description}</p>
-							{/if}
-						</div>
-
-						<div class="meta">
-							<span>{m.recipes_servings()}: {recipe.servings}</span>
-							<span>
-								{m.recipes_prep_time()}: {m.recipes_minutes({
-									count: `${recipe.preparation_time_in_minutes}`,
-								})}
-							</span>
-						</div>
-
-						{#if recipe.tags?.length}
-							<div class="tags">
-								{#each recipe.tags as tag}
-									<a
-										href={get_tag_filter_href(tag)}
-										class="tag-chip"
-										class:selected={selected_tags.includes(tag)}
-										aria-current={selected_tags.includes(tag)
-											? "true"
-											: undefined}
-									>
-										{get_recipe_tag_label(tag, m)}
-									</a>
-								{/each}
-							</div>
-						{/if}
-
-						<div class="actions">
-							<Button
-								variant="outline"
-								size="small"
-								round
-								href={localizeHref(`/recipes/${recipe.slug}`)}
-							>
-								{m.recipes_view_details()}
-							</Button>
-							<Button
-								variant="primary"
-								size="small"
-								round
-								href={localizeHref(`/planner?recipe=${recipe.id}`)}
-							>
-								{m.recipes_add_to_plan()}
-							</Button>
-						</div>
-					</div>
-				</article>
+			{#each filtered_recipes as recipe (recipe.id)}
+				<RecipeCard
+					{recipe}
+					selectedTags={selected_tags}
+					getTagFilterHref={get_tag_filter_href}
+					getTagLabel={get_tag_label}
+					viewDetailsLabel={m.recipes_view_details()}
+					addToPlanLabel={m.recipes_add_to_plan()}
+					servingsLabel={m.recipes_servings()}
+					prepTimeLabel={m.recipes_prep_time()}
+					formatMinutes={(minutes) =>
+						m.recipes_minutes({ count: `${minutes}` })}
+				/>
 			{/each}
 		</div>
+
+		{#if recipes_query.error && recipes.length > 0}
+			<p class="load-feedback error-state">{m.recipes_error()}</p>
+		{/if}
+
+		{#if has_more_recipes || recipes_query.isFetchingNextPage}
+			<div class="load-more">
+				<div
+					class="load-trigger"
+					aria-hidden="true"
+					use:intersect={{
+						enabled: has_more_recipes && !recipes_query.isFetchingNextPage,
+						rootMargin: "500px 0px",
+						onIntersect: () => {
+							void load_more_recipes();
+						},
+					}}
+				></div>
+
+				{#if has_more_recipes}
+					<Button
+						variant="outline"
+						size="medium"
+						round
+						loading={recipes_query.isFetchingNextPage}
+						onclick={() => {
+							void load_more_recipes();
+						}}
+					>
+						{m.recipes_load_more()}
+					</Button>
+				{/if}
+
+				<p class="load-feedback">
+					{recipes_query.isFetchingNextPage
+						? m.recipes_loading_more()
+						: m.recipes_end_of_list()}
+				</p>
+			</div>
+		{:else}
+			<p class="load-feedback">{m.recipes_end_of_list()}</p>
+		{/if}
 	{/if}
 </section>
 
@@ -274,90 +328,71 @@
 		}
 	}
 
-	.card {
-		display: flex;
-		flex-direction: column;
-		height: 100%;
-		overflow: hidden;
-		border: 1px solid var(--border);
-		border-radius: 20px;
-		background-color: color-mix(in srgb, var(--surface) 97%, transparent);
-		box-shadow: var(--soft-box-shadow);
-
-		@include lg {
-			border-radius: 18px;
-		}
-	}
-
-	.image {
-		width: 100%;
-		aspect-ratio: 16 / 10;
-		object-fit: cover;
-		background: linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--secondary) 18%, transparent),
-			color-mix(in srgb, var(--primary) 14%, transparent)
-		);
-
-		@include lg {
-			aspect-ratio: 16 / 8.5;
-		}
-	}
-
-	.card-body {
-		display: flex;
-		flex-direction: column;
+	.loading-state {
+		display: grid;
 		gap: 1rem;
-		padding: 1rem;
-		flex: 1;
-
-		@include lg {
-			gap: 0.875rem;
-			padding: 0.875rem;
-		}
 	}
 
-	.card-top {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-
-		h2 {
-			font-size: 1.125rem;
-			margin-bottom: 0.25rem;
-
-			@include lg {
-				font-size: 1rem;
-				margin-bottom: 0.125rem;
-			}
-		}
-
-		p {
-			color: var(--text-muted);
-
-			@include lg {
-				font-size: 0.9375rem;
-			}
-		}
-	}
-
-	.meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-		font-size: 0.875rem;
+	.loading-copy,
+	.load-feedback {
 		color: var(--text-muted);
+		text-align: center;
+	}
 
-		@include lg {
-			gap: 0.5rem 0.75rem;
-			font-size: 0.8125rem;
+	.skeleton-grid {
+		pointer-events: none;
+	}
+
+	.skeleton-card {
+		min-height: 23rem;
+		border-radius: 20px;
+		border: 1px solid color-mix(in srgb, var(--primary) 8%, var(--border));
+		background: linear-gradient(
+			110deg,
+			color-mix(in srgb, var(--surface-muted) 82%, var(--surface)) 8%,
+			color-mix(in srgb, var(--surface) 98%, transparent) 18%,
+			color-mix(in srgb, var(--surface-muted) 82%, var(--surface)) 33%
+		);
+		background-size: 200% 100%;
+		animation: shimmer 1.4s linear infinite;
+	}
+
+	.load-more {
+		display: grid;
+		justify-items: center;
+		gap: 0.75rem;
+		padding-top: 0.25rem;
+
+		:global(.btn) {
+			max-width: 20rem;
 		}
 	}
 
-	.tags {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
+	.load-trigger {
+		width: 100%;
+		height: 1px;
+	}
+
+	.error-state {
+		color: var(--error);
+		border-color: color-mix(in srgb, var(--error) 30%, var(--border));
+		background-color: color-mix(in srgb, var(--error) 6%, var(--surface));
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.skeleton-card {
+			animation: none;
+		}
+	}
+
+	@keyframes shimmer {
+		from {
+			background-position: 200% 0;
+		}
+
+		to {
+			background-position: -200% 0;
+		}
 	}
 
 	.tag-chip {
@@ -412,32 +447,6 @@
 		@include lg {
 			padding: 0.32rem 0.68rem;
 			font-size: 0.75rem;
-		}
-	}
-
-	.actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 1rem;
-		margin-top: auto;
-
-		@include lg {
-			gap: 0.625rem;
-		}
-
-		:global(.btn) {
-			width: auto;
-			min-width: 9.5rem;
-
-			@include md {
-				width: auto;
-			}
-
-			@include lg {
-				min-width: 0;
-				flex: 1 1 0;
-				padding-inline: 0.8rem;
-			}
 		}
 	}
 
