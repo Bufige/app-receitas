@@ -7,13 +7,16 @@
 	import ProfileTabs from "$lib/components/ui/ProfileTabs/index.svelte";
 	import SEO from "$lib/components/ui/SEO/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
+	import { useAuthStore } from "$lib/stores/auth.svelte";
 	import { useHouseholdProfileStore } from "$lib/stores/household-profile.svelte";
 	import { useMealPlanStore } from "$lib/stores/meal-plan.svelte";
 	import type { HouseholdKind } from "$lib/types/planning";
 	import { announce } from "$lib/utils/announce";
 
+	const auth_store = useAuthStore();
 	const household_store = useHouseholdProfileStore();
 	const meal_plan_store = useMealPlanStore();
+	const is_guest_session = $derived(!auth_store.isAuthenticated);
 	const households = $derived(household_store.profiles);
 	const home_household_id = $derived.by(
 		() =>
@@ -138,6 +141,10 @@
 	}
 
 	function create_household(kind: HouseholdKind) {
+		if (is_guest_session) {
+			return;
+		}
+
 		const created = household_store.createHousehold(kind);
 		announce(household_created(created.name));
 	}
@@ -191,24 +198,26 @@
 				<h2>{household_profiles_title()}</h2>
 				<p>{household_filter_hint()}</p>
 			</div>
-			<div class="household-actions">
-				<Button
-					variant="outline"
-					size="small"
-					round
-					onclick={() => create_household("home")}
-				>
-					{household_add_home()}
-				</Button>
-				<Button
-					variant="outline"
-					size="small"
-					round
-					onclick={() => create_household("business")}
-				>
-					{household_add_business()}
-				</Button>
-			</div>
+			{#if !is_guest_session}
+				<div class="household-actions">
+					<Button
+						variant="outline"
+						size="small"
+						round
+						onclick={() => create_household("home")}
+					>
+						{household_add_home()}
+					</Button>
+					<Button
+						variant="outline"
+						size="small"
+						round
+						onclick={() => create_household("business")}
+					>
+						{household_add_business()}
+					</Button>
+				</div>
+			{/if}
 		</div>
 
 		<div class="household-list" role="list">
