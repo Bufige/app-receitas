@@ -14,6 +14,7 @@ import type {
 import type { Recipe } from "$lib/types/recipe";
 import {
 	backend_meal_plan_to_ui_plan,
+	backend_meal_plans_to_ui_recipes,
 	backend_recipe_to_ui_recipe,
 	backend_shopping_list_to_ui_items,
 	ui_entry_to_backend_recipe_slot,
@@ -204,6 +205,7 @@ async function create_remote_plan(
 		profile_id: normalize_profile_id(household_id),
 		recipes: [],
 	});
+	merge_recipe_catalog(backend_meal_plans_to_ui_recipes([response.data]));
 	const next_plan = backend_meal_plan_to_ui_plan(response.data);
 	meal_plans = [
 		next_plan,
@@ -228,6 +230,7 @@ async function load_guest_plan(): Promise<MealPlan[]> {
 	if (stored_plan_id) {
 		try {
 			const response = await mealPlansApi.get(stored_plan_id);
+			merge_recipe_catalog(backend_meal_plans_to_ui_recipes([response.data]));
 			return [backend_meal_plan_to_ui_plan(response.data)];
 		} catch {
 			if (browser) {
@@ -246,6 +249,7 @@ async function load_meal_plans() {
 	if (has_token) {
 		try {
 			const response = await mealPlansApi.list();
+			merge_recipe_catalog(backend_meal_plans_to_ui_recipes(response.data));
 			const next_plans = map_backend_plans(response.data);
 
 			if (next_plans.length > 0) {
@@ -333,10 +337,19 @@ async function sync_remote_plan(plan: MealPlan) {
 		});
 
 		const next_plan = backend_meal_plan_to_ui_plan(response.data);
-		meal_plans = meal_plans.map((current_plan) =>
-			current_plan.id === next_plan.id ? next_plan : current_plan,
-		);
-		await refresh_shopping_list(next_plan.id);
+		merge_recipe_catalog(backend_meal_plans_to_ui_recipes([response.data]));
+		meal_plans = meal_plans.map((current_plan) => {
+			if (current_plan.id !== plan.id) {
+				return current_plan;
+			}
+
+			return {
+				...current_plan,
+				name: next_plan.name,
+				household_id: next_plan.household_id,
+			};
+		});
+		await refresh_shopping_list(plan.id);
 	} catch {
 		return;
 	}

@@ -25,7 +25,7 @@ export function infer_recipe_location(timezone?: string): {
 	region?: BrazilRegion;
 } {
 	return {
-		country: "Brazil",
+		country: "brazil",
 		region: timezone ? brazil_region_by_timezone[timezone] : undefined,
 	};
 }

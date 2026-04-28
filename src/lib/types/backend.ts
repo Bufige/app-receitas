@@ -48,6 +48,12 @@ export type BackendTag = BackendBaseEntity & {
 	name: string;
 };
 
+export type BackendRecipeTagListItem = {
+	id: string;
+	name: string;
+	recipes_count: number;
+};
+
 export type BackendRecipeIngredient = BackendBaseEntity & {
 	recipe_id: string;
 	ingredient_id: string;
@@ -118,6 +124,16 @@ export type BackendMealPlanShoppingListItem = {
 };
 
 export type ListRecipesResult = RequestResponse<BackendRecipe[]> & {
+	meta?: {
+		page?: number;
+		limit?: number;
+		total?: number;
+	};
+};
+
+export type ListRecipeTagsResult = RequestResponse<
+	BackendRecipeTagListItem[]
+> & {
 	meta?: {
 		page?: number;
 		limit?: number;

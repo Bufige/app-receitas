@@ -2,6 +2,10 @@ import type { Recipe } from "$lib/types/recipe";
 import { parse_iso_date } from "$lib/utils/planning";
 import { infer_recipe_location } from "$lib/utils/recipe-location";
 
+function normalize_country(country?: string): string {
+	return country?.trim().toLowerCase() ?? "";
+}
+
 function shuffle_recipes(recipes: Recipe[]): Recipe[] {
 	const shuffled_recipes = [...recipes];
 
@@ -20,19 +24,21 @@ export function build_recipe_pool(
 	timezone?: string,
 ): Recipe[] {
 	const location = infer_recipe_location(timezone);
+	const normalized_country = normalize_country(location.country);
 	const region_matches = recipes.filter(
 		(recipe) =>
-			recipe.country === location.country &&
+			normalize_country(recipe.country) === normalized_country &&
 			location.region !== undefined &&
 			recipe.region === location.region,
 	);
 	const country_generic = recipes.filter(
 		(recipe) =>
-			recipe.country === location.country && recipe.region === undefined,
+			normalize_country(recipe.country) === normalized_country &&
+			recipe.region === undefined,
 	);
 	const country_fallback = recipes.filter(
 		(recipe) =>
-			recipe.country === location.country &&
+			normalize_country(recipe.country) === normalized_country &&
 			!region_matches.some((candidate) => candidate.id === recipe.id) &&
 			!country_generic.some((candidate) => candidate.id === recipe.id),
 	);

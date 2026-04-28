@@ -135,6 +135,25 @@ export function backend_meal_plan_to_ui_plan(
 	};
 }
 
+export function backend_meal_plan_to_ui_recipes(
+	meal_plan: BackendMealPlan,
+): Recipe[] {
+	return (
+		meal_plan.recipes
+			?.map((recipe_slot: BackendMealPlanRecipe) => recipe_slot.recipe)
+			.filter((recipe): recipe is BackendRecipe => Boolean(recipe))
+			.map((recipe) => backend_recipe_to_ui_recipe(recipe)) ?? []
+	);
+}
+
+export function backend_meal_plans_to_ui_recipes(
+	meal_plans: BackendMealPlan[],
+): Recipe[] {
+	return meal_plans.flatMap((meal_plan) =>
+		backend_meal_plan_to_ui_recipes(meal_plan),
+	);
+}
+
 export function ui_entry_to_backend_recipe_slot(entry: MealPlanEntry): {
 	recipe_id: string;
 	meal_date: string;

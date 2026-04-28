@@ -8,6 +8,7 @@ import {
 import { recipesApi } from "$lib/api/recipes";
 import type {
 	BackendRecipe,
+	ListRecipeTagsResult,
 	ListRecipesResult,
 	RandomRecipesResult,
 } from "$lib/types/backend";
@@ -17,10 +18,16 @@ export type RecipesListParams = {
 	page?: number;
 	limit?: number;
 	query?: string;
+	tag_ids?: string[];
 	servings_min?: number;
 	servings_max?: number;
 	prep_time_min?: number;
 	prep_time_max?: number;
+};
+
+export type RecipeTagsListParams = {
+	page?: number;
+	limit?: number;
 };
 
 export function createRecipesQuery(
@@ -94,6 +101,17 @@ export function createRecipeQuery(
 		queryKey: queryKeys.recipes.detail(recipe_id() ?? ""),
 		queryFn: () => recipesApi.get(recipe_id() ?? ""),
 		enabled: Boolean(recipe_id()),
+		...options,
+	}));
+}
+
+export function createRecipeTagsQuery(
+	params?: RecipeTagsListParams,
+	options?: Partial<CreateQueryOptions<ListRecipeTagsResult>>,
+) {
+	return createQuery(() => ({
+		queryKey: queryKeys.recipes.tags(params),
+		queryFn: () => recipesApi.listTags(params),
 		...options,
 	}));
 }

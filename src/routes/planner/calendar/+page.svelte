@@ -25,6 +25,7 @@
 	import type { Recipe } from "$lib/types/recipe";
 	import { announce } from "$lib/utils/announce";
 	import { backend_recipe_to_ui_recipe } from "$lib/utils/backend-adapters";
+	import { infer_recipe_location } from "$lib/utils/recipe-location";
 	import {
 		build_recipe_pool,
 		collect_plan_dates,
@@ -200,19 +201,25 @@
 				key: "month" as const,
 				label: m.planner_calendar_generate_month(),
 				loading: is_regenerating === "month",
-				handler: regenerate_month_plan,
+				handler: () => {
+					void regenerate_month_plan();
+				},
 			},
 			{
 				key: "two_weeks" as const,
 				label: m.planner_calendar_generate_two_weeks(),
 				loading: is_regenerating === "two_weeks",
-				handler: regenerate_next_two_weeks_plan,
+				handler: () => {
+					void regenerate_next_two_weeks_plan();
+				},
 			},
 			{
 				key: "week" as const,
 				label: m.planner_calendar_generate_week(),
 				loading: is_regenerating === "week",
-				handler: regenerate_this_week,
+				handler: () => {
+					void regenerate_this_week();
+				},
 			},
 		];
 
@@ -738,7 +745,46 @@
 			: undefined;
 	}
 
-	function replace_current_plan_with_generated_meals(range: {
+	async function fetch_plan_recipes(amount: number): Promise<Recipe[]> {
+		const timezone = get_browser_timezone();
+		const location = infer_recipe_location(timezone);
+
+		try {
+			const response = await recipesApi.random({
+				amount,
+				country: location.country,
+			});
+
+			const recipes = response.data.map((recipe) =>
+				backend_recipe_to_ui_recipe(recipe),
+			);
+
+			if (recipes.length > 0) {
+				meal_plan_store.mergeRecipes(recipes);
+				return recipes;
+			}
+		} catch {
+			// fall through to list fallback
+		}
+
+		try {
+			const response = await recipesApi.list({ page: 0, limit: amount });
+
+			const recipes = response.data.map((recipe) =>
+				backend_recipe_to_ui_recipe(recipe),
+			);
+
+			if (recipes.length > 0) {
+				meal_plan_store.mergeRecipes(recipes);
+			}
+
+			return recipes;
+		} catch {
+			return [];
+		}
+	}
+
+	async function replace_current_plan_with_generated_meals(range: {
 		start_date: string;
 		end_date: string;
 		period: "week" | "month";
@@ -746,15 +792,19 @@
 		feedback_message: string;
 	}) {
 		clear_calendar_feedback();
+		await meal_plan_store.ensureReady();
 
-		const recipe_pool = build_recipe_pool(
-			meal_plan_store.recipes,
-			get_browser_timezone(),
-		);
 		const plan_dates = collect_plan_dates(
 			range.start_date,
 			range.end_date,
 			Number.MAX_SAFE_INTEGER,
+		);
+		const needed_recipe_count = plan_dates.length * generated_meal_types.length;
+		const fetched_recipes = await fetch_plan_recipes(needed_recipe_count);
+
+		const recipe_pool = build_recipe_pool(
+			fetched_recipes.length > 0 ? fetched_recipes : meal_plan_store.recipes,
+			get_browser_timezone(),
 		);
 
 		if (recipe_pool.length === 0 || plan_dates.length === 0) {
@@ -795,7 +845,7 @@
 		show_calendar_feedback(range.feedback_message);
 	}
 
-	function regenerate_this_week() {
+	async function regenerate_this_week() {
 		if (is_regenerating) {
 			return;
 		}
@@ -803,7 +853,7 @@
 		is_regenerating = "week";
 
 		try {
-			replace_current_plan_with_generated_meals({
+			await replace_current_plan_with_generated_meals({
 				...get_preset_range("this_week"),
 				period: "week",
 				planning_preset: "this_week",
@@ -814,7 +864,7 @@
 		}
 	}
 
-	function regenerate_month_plan() {
+	async function regenerate_month_plan() {
 		if (is_regenerating) {
 			return;
 		}
@@ -822,7 +872,7 @@
 		is_regenerating = "month";
 
 		try {
-			replace_current_plan_with_generated_meals({
+			await replace_current_plan_with_generated_meals({
 				...get_preset_range("this_month"),
 				period: "month",
 				planning_preset: "this_month",
@@ -833,7 +883,7 @@
 		}
 	}
 
-	function regenerate_next_two_weeks_plan() {
+	async function regenerate_next_two_weeks_plan() {
 		if (is_regenerating) {
 			return;
 		}
@@ -841,7 +891,7 @@
 		is_regenerating = "two_weeks";
 
 		try {
-			replace_current_plan_with_generated_meals({
+			await replace_current_plan_with_generated_meals({
 				...get_next_two_weeks_range(),
 				period: "week",
 				planning_preset: "custom_range",

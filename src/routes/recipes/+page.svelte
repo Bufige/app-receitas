@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import magnify from "@iconify-icons/mdi/magnify";
 	import Button from "$lib/components/ui/Button/index.svelte";
@@ -8,12 +9,16 @@
 	import PageHero from "$lib/components/ui/PageHero/index.svelte";
 	import * as m from "$lib/paraglide/messages.js";
 	import { localizeHref } from "$lib/paraglide/runtime";
-	import { createInfiniteRecipesQuery } from "$lib/queries/recipes";
+	import {
+		createInfiniteRecipesQuery,
+		createRecipeTagsQuery,
+	} from "$lib/queries/recipes";
 	import { backend_recipe_to_ui_recipe } from "$lib/utils/backend-adapters";
 	import { intersect } from "$lib/utils/intersect";
 	import { get_recipe_tag_label } from "$lib/utils/recipe-tags";
 
 	const RECIPES_PAGE_SIZE = 12;
+	const RECIPE_TAGS_PAGE_SIZE = 100;
 	const SEARCH_DEBOUNCE_MS = 250;
 
 	let search = $state("");
@@ -28,10 +33,68 @@
 		return () => clearTimeout(timeout);
 	});
 
+	const recipe_tags_query = createRecipeTagsQuery(
+		{ limit: RECIPE_TAGS_PAGE_SIZE },
+		{
+			staleTime: 60_000,
+		},
+	);
+
+	const available_recipe_tags = $derived.by(
+		() => recipe_tags_query.data?.data ?? [],
+	);
+
+	const recipe_tag_by_id = $derived.by(
+		() =>
+			new Map(
+				available_recipe_tags.map((recipe_tag) => [recipe_tag.id, recipe_tag]),
+			),
+	);
+
+	const recipe_tag_id_by_name = $derived.by(
+		() =>
+			new Map(
+				available_recipe_tags.map((recipe_tag) => [
+					recipe_tag.name,
+					recipe_tag.id,
+				]),
+			),
+	);
+
+	function normalize_tag_ids(tag_ids: string[]) {
+		return [...new Set(tag_ids.map((tag_id) => tag_id.trim()).filter(Boolean))];
+	}
+
+	function parse_selected_tag_ids() {
+		const tag_ids_from_query = normalize_tag_ids(
+			(page.url.searchParams.get("tag_ids") ?? "").split(","),
+		);
+
+		if (tag_ids_from_query.length > 0 || !page.url.searchParams.has("tags")) {
+			return tag_ids_from_query;
+		}
+
+		return normalize_tag_ids(
+			(page.url.searchParams.get("tags") ?? "")
+				.split(",")
+				.map((tag_name) => recipe_tag_id_by_name.get(tag_name.trim()) ?? ""),
+		);
+	}
+
+	const selected_tag_ids = $derived.by(() => parse_selected_tag_ids());
+
+	const selected_tag_names = $derived.by(() =>
+		selected_tag_ids.flatMap((tag_id) => {
+			const recipe_tag = recipe_tag_by_id.get(tag_id);
+			return recipe_tag ? [recipe_tag.name] : [];
+		}),
+	);
+
 	const recipes_query = createInfiniteRecipesQuery(
 		() => ({
 			limit: RECIPES_PAGE_SIZE,
 			query: debounced_search || undefined,
+			tag_ids: selected_tag_ids.length > 0 ? selected_tag_ids : undefined,
 		}),
 		{
 			staleTime: 60_000,
@@ -45,81 +108,32 @@
 			) ?? [],
 	);
 
-	function normalize_tags(tags: string[]) {
-		return [...new Set(tags)]
-			.filter((tag) =>
-				recipes.some((recipe) => (recipe.tags ?? []).includes(tag)),
-			)
-			.sort();
-	}
-
-	function parse_tags_param() {
-		return normalize_tags(
-			(page.url.searchParams.get("tags") ?? "")
-				.split(",")
-				.map((tag) => tag.trim())
-				.filter(Boolean),
-		);
-	}
-
-	const all_tags = $derived.by(() => {
-		const unique_tags = new Set<string>();
-
-		for (const recipe of recipes) {
-			for (const tag of recipe.tags ?? []) {
-				unique_tags.add(tag);
-			}
-		}
-
-		return [...unique_tags].sort((left, right) =>
-			get_recipe_tag_label(left, m).localeCompare(
-				get_recipe_tag_label(right, m),
-			),
-		);
-	});
-
-	const selected_tags = $derived.by(() => parse_tags_param());
+	const all_tags = $derived.by(() => available_recipe_tags);
 
 	function get_tag_filter_href(tag: string) {
 		const next_url = new URL(page.url);
-		const next_tags = selected_tags.includes(tag)
-			? selected_tags.filter((selected_tag) => selected_tag !== tag)
-			: [...selected_tags, tag];
-		const normalized_next_tags = normalize_tags(next_tags);
+		const tag_id = recipe_tag_by_id.has(tag)
+			? tag
+			: recipe_tag_id_by_name.get(tag);
+
+		if (!tag_id) {
+			return `${next_url.pathname}${next_url.search}`;
+		}
+
+		const next_tag_ids = selected_tag_ids.includes(tag_id)
+			? selected_tag_ids.filter((selected_tag_id) => selected_tag_id !== tag_id)
+			: [...selected_tag_ids, tag_id];
+		const normalized_next_tag_ids = normalize_tag_ids(next_tag_ids);
 
 		next_url.searchParams.delete("tags");
+		next_url.searchParams.delete("tag_ids");
 
-		if (normalized_next_tags.length > 0) {
-			next_url.searchParams.set("tags", normalized_next_tags.join(","));
+		if (normalized_next_tag_ids.length > 0) {
+			next_url.searchParams.set("tag_ids", normalized_next_tag_ids.join(","));
 		}
 
 		return `${next_url.pathname}${next_url.search}`;
 	}
-
-	const filtered_recipes = $derived.by(() => {
-		const normalized_query = search.trim().toLowerCase();
-
-		return recipes.filter((recipe) => {
-			const haystack = [
-				recipe.name,
-				recipe.description ?? "",
-				...(recipe.tags ?? []).flatMap((tag) => [
-					tag,
-					get_recipe_tag_label(tag, m),
-				]),
-			]
-				.join(" ")
-				.toLowerCase();
-
-			const matches_search =
-				normalized_query.length === 0 || haystack.includes(normalized_query);
-			const matches_tags = selected_tags.every((tag) =>
-				(recipe.tags ?? []).includes(tag),
-			);
-
-			return matches_search && matches_tags;
-		});
-	});
 
 	const is_initial_loading = $derived.by(
 		() => recipes_query.isPending && recipes.length === 0,
@@ -130,9 +144,30 @@
 	const has_more_recipes = $derived.by(() =>
 		Boolean(recipes_query.hasNextPage),
 	);
+	const has_active_filters = $derived.by(
+		() => selected_tag_ids.length > 0 || search.trim().length > 0,
+	);
+	const recipes_total = $derived.by(
+		() => recipes_query.data?.pages[0]?.meta?.total ?? recipes.length,
+	);
 
 	function get_tag_label(tag: string) {
 		return get_recipe_tag_label(tag, m);
+	}
+
+	async function clear_filters() {
+		search = "";
+		debounced_search = "";
+
+		const next_url = new URL(page.url);
+		next_url.searchParams.delete("tags");
+		next_url.searchParams.delete("tag_ids");
+
+		await goto(`${next_url.pathname}${next_url.search}`, {
+			keepFocus: true,
+			noScroll: true,
+			replaceState: true,
+		});
 	}
 
 	async function load_more_recipes() {
@@ -171,16 +206,38 @@
 			/>
 		</div>
 
+		<div class="toolbar-meta">
+			<p class="results-summary" role="status" aria-live="polite">
+				{m.recipes_results_count({ count: `${recipes_total}` })}
+			</p>
+
+			{#if has_active_filters}
+				<Button
+					variant="outline"
+					size="small"
+					round
+					onclick={() => {
+						void clear_filters();
+					}}
+				>
+					{m.recipes_clear_filters()}
+				</Button>
+			{/if}
+		</div>
+
 		{#if all_tags.length}
-			<div class="filter-bar" aria-label={m.recipes_search_label()}>
+			<div class="filter-bar" aria-label={m.a11y_recipe_tag_filters()}>
 				{#each all_tags as tag}
 					<a
-						href={get_tag_filter_href(tag)}
+						href={get_tag_filter_href(tag.id)}
 						class="tag-chip filter-chip"
-						class:selected={selected_tags.includes(tag)}
-						aria-current={selected_tags.includes(tag) ? "true" : undefined}
+						class:selected={selected_tag_ids.includes(tag.id)}
+						aria-current={selected_tag_ids.includes(tag.id)
+							? "true"
+							: undefined}
 					>
-						{get_recipe_tag_label(tag, m)}
+						<span>{get_recipe_tag_label(tag.name, m)}</span>
+						<span class="tag-count">{tag.recipes_count}</span>
 					</a>
 				{/each}
 			</div>
@@ -198,14 +255,14 @@
 				{/each}
 			</div>
 		</div>
-	{:else if filtered_recipes.length === 0}
+	{:else if recipes.length === 0}
 		<p class="empty">{m.recipes_empty()}</p>
 	{:else}
 		<div class="grid">
-			{#each filtered_recipes as recipe (recipe.id)}
+			{#each recipes as recipe (recipe.id)}
 				<RecipeCard
 					{recipe}
-					selectedTags={selected_tags}
+					selectedTags={selected_tag_names}
 					getTagFilterHref={get_tag_filter_href}
 					getTagLabel={get_tag_label}
 					viewDetailsLabel={m.recipes_view_details()}
@@ -300,12 +357,48 @@
 		max-width: 30rem;
 	}
 
+	.toolbar-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		align-items: center;
+		justify-content: space-between;
+
+		:global(.btn) {
+			width: auto;
+			min-width: 0;
+		}
+	}
+
+	.results-summary {
+		color: var(--text-muted);
+		font-size: 0.9375rem;
+		font-weight: 600;
+	}
+
 	.filter-bar {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.75rem 0.5rem;
 		align-items: center;
 		align-content: flex-start;
+	}
+
+	.filter-chip {
+		gap: 0.45rem;
+	}
+
+	.tag-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.5rem;
+		padding: 0.15rem 0.4rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+		color: inherit;
+		font-size: 0.75rem;
+		line-height: 1;
 	}
 
 	.grid {
